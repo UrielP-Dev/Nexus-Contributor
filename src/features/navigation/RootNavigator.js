@@ -16,7 +16,14 @@ export function RootNavigator() {
     >
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Dashboard" component={DashboardScreen} />
+      <Stack.Screen 
+        name="Dashboard" 
+        component={DashboardScreen}
+        options={{
+          headerShown: false,
+          gestureEnabled: false
+        }}
+      />
     </Stack.Navigator>
   );
 }
