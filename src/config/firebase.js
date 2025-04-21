@@ -1,22 +1,22 @@
 import { initializeApp } from "firebase/app";
-import {
-  FIREBASE_API_KEY,
-  FIREBASE_AUTH_DOMAIN,
-  FIREBASE_PROJECT_ID,
-  FIREBASE_STORAGE_BUCKET,
-  FIREBASE_MESSAGING_SENDER_ID,
-  FIREBASE_APP_ID
-} from "@env";
+import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
-  apiKey: FIREBASE_API_KEY,
-  authDomain: FIREBASE_AUTH_DOMAIN,
-  projectId: FIREBASE_PROJECT_ID,
-  storageBucket: FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: FIREBASE_MESSAGING_SENDER_ID,
-  appId: FIREBASE_APP_ID
+    apiKey: "AIzaSyCZ9UjivhgYgRsLkQxZ-bCDStdtnFSNv80",
+    authDomain: "nexus-b7be0.firebaseapp.com",
+    projectId: "nexus-b7be0",
+    storageBucket: "nexus-b7be0.firebasestorage.app",
+    messagingSenderId: "622248450549",
+    appId: "1:622248450549:web:0424be8959a4918d9c28bc"
 };
 
+// Inicializa Firebase
 const app = initializeApp(firebaseConfig);
 
-export default app;
+// Inicializa Auth con persistencia en AsyncStorage
+const auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+});
+
+export { app, auth };

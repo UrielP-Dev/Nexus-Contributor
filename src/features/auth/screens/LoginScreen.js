@@ -5,53 +5,57 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '../services/authService';
 
 const LoginScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('');
+  const [employeeNumber, setEmployeeNumber] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = async () => {
     try {
-      await authService.login(email, password);
-      navigation.replace('Dashboard');
+      if (!employeeNumber || !password) {
+        Alert.alert('Error', 'Por favor ingresa tu número de empleado y contraseña');
+        return;
+      }
+
+      const userData = await authService.login(employeeNumber, password);
+      navigation.replace('Dashboard', { userData });
     } catch (error) {
       Alert.alert('Error', error.message);
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-gray-50">
       <View className="px-6 pt-12">
-        <Text className="text-h2 font-bold text-primary mb-8">Login</Text>
+        <Text className="text-3xl font-bold text-gray-800 mb-8">Bienvenido</Text>
         
         <View className="space-y-4">
           <TextInput
-            className="bg-white p-4 rounded-md border border-border-neutral"
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
+            className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm"
+            placeholder="Número de empleado"
+            value={employeeNumber}
+            onChangeText={setEmployeeNumber}
+            keyboardType="numeric"
           />
           
           <TextInput
-            className="bg-white p-4 rounded-md border border-border-neutral"
-            placeholder="Password"
+            className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm"
+            placeholder="Contraseña"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
 
           <TouchableOpacity
-            className="rounded-md overflow-hidden mt-6"
+            className="rounded-lg overflow-hidden mt-6 shadow-md"
             onPress={handleLogin}
           >
             <LinearGradient
-              colors={['#006FB9', '#194B7B']}
+              colors={['#3B82F6', '#2563EB']}
               start={{ x: 0, y: 0 }}
-              end={{ x: 2, y: 0 }}
+              end={{ x: 1, y: 0 }}
             >
               <View className="py-4">
-                <Text className="text-center font-semibold text-body text-white">
-                  Login
+                <Text className="text-center font-semibold text-white text-lg">
+                  Iniciar Sesión
                 </Text>
               </View>
             </LinearGradient>
