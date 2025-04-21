@@ -1,6 +1,7 @@
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import firebaseApp from '../../../config/firebase';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const auth = getAuth(firebaseApp);
 
@@ -26,7 +27,10 @@ export const authService = {
   logout: async () => {
     try {
       await signOut(auth);
+      await AsyncStorage.removeItem('userData');
+      return true;
     } catch (error) {
+      console.error('Error during logout:', error);
       throw error;
     }
   },
