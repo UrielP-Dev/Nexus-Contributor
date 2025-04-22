@@ -1,20 +1,47 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { authService } from '../../auth/services/authService';
 
 export default function MainLayout({ children, navigation }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleLogout = async () => {
+    Alert.alert(
+      "Cerrar Sesión",
+      "¿Estás seguro que deseas cerrar sesión?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Sí, cerrar sesión",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await authService.logout();
+              navigation.replace('Login');
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo cerrar sesión');
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const menuItems = [
     { icon: 'home', label: 'Home', route: 'Dashboard' },
     { icon: 'person', label: 'Profile', route: 'Profile' },
     { icon: 'settings', label: 'Settings', route: 'Settings' },
+    { icon: 'create', label: 'Registro', route: 'Register' },
   ];
 
   const Sidebar = () => (
     <View className={`absolute left-0 top-0 h-full bg-white w-64 shadow-default z-50 ${isSidebarOpen ? 'flex' : 'hidden'}`}>
-      <View className="p-4">
+      <View className="p-4 border-b border-border-neutral">
         <Text className="text-h4 font-bold text-primary">Nexus</Text>
       </View>
       <ScrollView>
@@ -31,6 +58,18 @@ export default function MainLayout({ children, navigation }) {
             <Text className="ml-3 text-body text-text">{item.label}</Text>
           </TouchableOpacity>
         ))}
+        
+        {/* Separador */}
+        <View className="my-2 border-t border-border-neutral" />
+        
+        {/* Botón de Logout */}
+        <TouchableOpacity
+          className="p-4 flex-row items-center"
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out" size={24} color="#BA4B44" />
+          <Text className="ml-3 text-body text-semantic-error">Cerrar Sesión</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
