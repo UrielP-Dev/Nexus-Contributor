@@ -5,11 +5,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { useUser } from '../../../context/UserContext';
 
 const LoginScreen = ({ navigation }) => {
   const [employeeNumber, setEmployeeNumber] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const { updateUser } = useUser();
 
   useEffect(() => {
     checkExistingSession();
@@ -25,7 +27,9 @@ const LoginScreen = ({ navigation }) => {
     try {
       const userData = await AsyncStorage.getItem('userData');
       if (userData) {
-        navigation.replace('Dashboard', { userData: JSON.parse(userData) });
+        const parsedUserData = JSON.parse(userData);
+        updateUser(parsedUserData);
+        navigation.replace('Dashboard', { userData: parsedUserData });
       }
     } catch (error) {
       console.error('Error checking session:', error);
@@ -79,7 +83,7 @@ const LoginScreen = ({ navigation }) => {
                 </View>
                 <TextInput
                   className="flex-1 p-3 text-text"
-                  placeholder="Ingresa tu número"
+                  placeholder="Ingresa tu número de empleado"
                   value={employeeNumber}
                   onChangeText={setEmployeeNumber}
                   keyboardType="numeric"

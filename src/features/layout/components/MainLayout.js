@@ -3,8 +3,10 @@ import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '../../auth/services/authService';
+import { useUser } from '../../../context/UserContext';
 
 export default function MainLayout({ children, navigation }) {
+  const { clearUser } = useUser();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -22,6 +24,7 @@ export default function MainLayout({ children, navigation }) {
           onPress: async () => {
             try {
               await authService.logout();
+              clearUser();
               navigation.replace('Login');
             } catch (error) {
               Alert.alert('Error', 'No se pudo cerrar sesión');
@@ -34,6 +37,7 @@ export default function MainLayout({ children, navigation }) {
 
   const menuItems = [
     { icon: 'home', label: 'Home', route: 'Dashboard' },
+    { icon: 'people', label: 'Referidos', route: 'Referrals' },
     { icon: 'person', label: 'Profile', route: 'Profile' },
     { icon: 'settings', label: 'Settings', route: 'Settings' },
   ];
