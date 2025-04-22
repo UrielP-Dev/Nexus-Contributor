@@ -17,7 +17,7 @@ const RegisterScreen = ({ navigation }) => {
       }
 
       const db = getFirestore();
-      const usersRef = collection(db, 'users');
+      const usersRef = collection(db, 'registers');
       
       await addDoc(usersRef, {
         name,
