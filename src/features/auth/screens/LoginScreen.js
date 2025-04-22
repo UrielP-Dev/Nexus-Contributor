@@ -5,27 +5,37 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { useUser } from '../../../context/UserContext';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import firebaseApp from '../../../config/firebase';
+
+const db = getFirestore(firebaseApp);
 
 const LoginScreen = ({ navigation }) => {
   const [employeeNumber, setEmployeeNumber] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const { user, updateUser } = useUser();
 
   useEffect(() => {
     checkExistingSession();
-    // Prevenir el botón de retroceso
+    console.log('Estado actual del usuario:', user);
+    
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
       () => true
     );
     return () => backHandler.remove();
-  }, []);
+  }, [user]);
 
   const checkExistingSession = async () => {
     try {
       const userData = await AsyncStorage.getItem('userData');
       if (userData) {
-        navigation.replace('Dashboard', { userData: JSON.parse(userData) });
+        const parsedUserData = JSON.parse(userData);
+        console.log('Datos de usuario encontrados:', parsedUserData);
+        updateUser(parsedUserData);
+        navigation.replace('Dashboard', { userData: parsedUserData });
       }
     } catch (error) {
       console.error('Error checking session:', error);
@@ -40,9 +50,14 @@ const LoginScreen = ({ navigation }) => {
       }
 
       const userData = await authService.login(employeeNumber, password);
+      console.log('Login exitoso, datos:', userData);
+      
       await AsyncStorage.setItem('userData', JSON.stringify(userData));
+      updateUser(userData);
+      
       navigation.replace('Dashboard', { userData });
     } catch (error) {
+      console.error('Error en login:', error);
       Alert.alert('Error', error.message);
     }
   };
@@ -79,7 +94,7 @@ const LoginScreen = ({ navigation }) => {
                 </View>
                 <TextInput
                   className="flex-1 p-3 text-text"
-                  placeholder="Ingresa tu número"
+                  placeholder="Ingresa tu número de empleado"
                   value={employeeNumber}
                   onChangeText={setEmployeeNumber}
                   keyboardType="numeric"

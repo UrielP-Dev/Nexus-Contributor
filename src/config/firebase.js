@@ -12,15 +12,12 @@ const firebaseConfig = {
     appId: "1:622248450549:web:0424be8959a4918d9c28bc"
 };
 
-// Inicializa Firebase solo si no hay una instancia existente
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Inicializa Auth con persistencia en AsyncStorage
 const auth = initializeAuth(app, {
     persistence: getReactNativePersistence(ReactNativeAsyncStorage)
 });
 
-// Inicializa Firestore
 const db = getFirestore(app);
 
 export { app, auth, db };
