@@ -1,9 +1,10 @@
-import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import HomeScreen from '../auth/screens/HomeScreen';
-import LoginScreen from '../auth/screens/LoginScreen';
-import DashboardScreen from '../dashboard/screens/DashboardScreen';
-import RegisterScreen from '../RegisterForms/Screens/RegisterScreen';
+import React from "react";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import HomeScreen from "../auth/screens/HomeScreen";
+import LoginScreen from "../auth/screens/LoginScreen";
+import DashboardScreen from "../dashboard/screens/DashboardScreen";
+import RegisterScreen from "../RegisterForms/Screens/RegisterScreen";
+import RankingScreen from "../ranking/screens/RankingScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -17,19 +18,27 @@ export function RootNavigator() {
     >
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen 
-        name="Dashboard" 
+      <Stack.Screen
+        name="Dashboard"
         component={DashboardScreen}
         options={{
           headerShown: false,
-          gestureEnabled: false
+          gestureEnabled: false,
         }}
       />
-      <Stack.Screen 
-        name="Register" 
+      <Stack.Screen
+        name="Ranking"
+        component={RankingScreen}
+        options={{
+          headerShown: false,
+          gestureEnabled: false,
+        }}
+      />
+      <Stack.Screen
+        name="Register"
         component={RegisterScreen}
         options={{
-          headerShown: false
+          headerShown: false,
         }}
       />
     </Stack.Navigator>
