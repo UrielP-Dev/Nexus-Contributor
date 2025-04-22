@@ -31,14 +31,14 @@ export default function MainLayout({ children, navigation }) {
             }
           }
         },
-      },
+      
     ]);
   };
 
   const menuItems = [
     { icon: "home", label: "Home", route: "Dashboard" },
     { icon: "person", label: "Ranking", route: "Ranking" },
-    { icon: "settings", label: "Settings", route: "Settings" },
+    { icon: "people", label: "Referidos", route: "Referrals" },
     { icon: "create", label: "Registro", route: "Register" },
   ];
 

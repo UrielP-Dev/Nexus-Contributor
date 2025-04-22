@@ -15,23 +15,25 @@ const LoginScreen = ({ navigation }) => {
   const [employeeNumber, setEmployeeNumber] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { updateUser } = useUser();
+  const { user, updateUser } = useUser();
 
   useEffect(() => {
     checkExistingSession();
-    // Prevenir el botón de retroceso
+    console.log('Estado actual del usuario:', user);
+    
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
       () => true
     );
     return () => backHandler.remove();
-  }, []);
+  }, [user]);
 
   const checkExistingSession = async () => {
     try {
       const userData = await AsyncStorage.getItem('userData');
       if (userData) {
         const parsedUserData = JSON.parse(userData);
+        console.log('Datos de usuario encontrados:', parsedUserData);
         updateUser(parsedUserData);
         navigation.replace('Dashboard', { userData: parsedUserData });
       }
@@ -48,13 +50,14 @@ const LoginScreen = ({ navigation }) => {
       }
 
       const userData = await authService.login(employeeNumber, password);
-      await AsyncStorage.setItem('userData', JSON.stringify(userData));
+      console.log('Login exitoso, datos:', userData);
       
-      // Asegúrate de que el ID del usuario se actualice en el contexto
+      await AsyncStorage.setItem('userData', JSON.stringify(userData));
       updateUser(userData);
       
       navigation.replace('Dashboard', { userData });
     } catch (error) {
+      console.error('Error en login:', error);
       Alert.alert('Error', error.message);
     }
   };

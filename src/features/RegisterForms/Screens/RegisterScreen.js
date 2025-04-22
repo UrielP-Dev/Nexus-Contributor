@@ -7,7 +7,7 @@ import { useUser } from '../../../context/UserContext';
 import { Ionicons } from '@expo/vector-icons';
 
 const RegisterScreen = ({ navigation }) => {
-  const { userData } = useUser();
+  const { user, userData } = useUser();
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [postalCode, setPostalCode] = useState('');
@@ -15,15 +15,36 @@ const RegisterScreen = ({ navigation }) => {
   const [enteredPin, setEnteredPin] = useState('');
   const [registeredUserId, setRegisteredUserId] = useState(null);
 
+  // Usar user como respaldo si userData no está disponible
+  const currentUser = userData || user;
+
   useEffect(() => {
-    console.log("Estado de usuario actual:", userData);
-  }, [userData]);
+    console.log("Estado de usuario actual:", currentUser);
+    
+    // Si no hay usuario, mostrar alerta
+    if (!currentUser) {
+      Alert.alert(
+        'No hay sesión activa',
+        'Para registrar referidos necesitas iniciar sesión primero.',
+        [
+          {
+            text: 'Ir a Login',
+            onPress: () => navigation.navigate('Login')
+          },
+          {
+            text: 'Continuar como invitado',
+            style: 'cancel'
+          }
+        ]
+      );
+    }
+  }, [currentUser, navigation]);
 
   const FIXED_PIN = '0909';
 
   const handleRegister = async () => {
     try {
-      console.log("Intentando registrar, estado del usuario:", userData);
+      console.log("Intentando registrar, estado del usuario:", currentUser);
 
       if (!name || !phoneNumber || !postalCode) {
         Alert.alert('Error', 'Por favor completa todos los campos');
@@ -33,7 +54,12 @@ const RegisterScreen = ({ navigation }) => {
       const db = getFirestore();
       const registersRef = collection(db, 'registers');
       
-      const referrerId = userData?.employee_number || 'guest-user';
+      // Usar el número de empleado del usuario o un valor por defecto
+      const referrerId = currentUser?.employee_number || 
+                         currentUser?.employeeNumber || 
+                         currentUser?.id || 
+                         'guest-user';
+                         
       console.log("Número de empleado que se usará como ID de referidor:", referrerId);
       
       const docRef = await addDoc(registersRef, {
