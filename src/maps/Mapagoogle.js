@@ -4,6 +4,7 @@ import MapView, { Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { app } from '../config/firebase'; // Asegúrate de que la ruta sea correcta
+import { useUser } from '../context/UserContext';
 
 const GOOGLE_MAPS_APIKEY = "AIzaSyAA8WEJzLQUMhR1p1Vucxi4g_cO3DVLGOM";
 
@@ -13,10 +14,19 @@ const MapaGoogle = () => {
   const [waypoints, setWaypoints] = useState([]);
   const db = getFirestore(app);
 
+  // Obtener userData desde el contexto
+  const { userData } = useUser();
+
   useEffect(() => {
     const fetchRoute = async () => {
       try {
-        const q = query(collection(db, "routes"), where("routeId", "==", "ChIJpxjMIzfbp9FW2j5S1M0w"));
+        // Verificar si userData y routeId están disponibles
+        if (!userData || !userData.routeId) {
+          console.log("No se encontró routeId en userData.");
+          return;
+        }
+        console.log(userData.routeId);
+        const q = query(collection(db, "routes"), where("routeId", "==", userData.routeId));
         const snapshot = await getDocs(q);
 
         if (!snapshot.empty) {
@@ -33,7 +43,7 @@ const MapaGoogle = () => {
     };
 
     fetchRoute();
-  }, []);
+  }, [userData]); // Escuchar cambios en userData
 
   if (!origin || !destination) {
     return <Text>Cargando mapa...</Text>;
@@ -41,12 +51,15 @@ const MapaGoogle = () => {
 
   return (
     <View className="bg-background-box rounded-md shadow-default mb-2 h-[225px] w-full overflow-hidden">
-      <MapView style={{ flex: 1 }} initialRegion={{
-        latitude: origin.latitude,
-        longitude: origin.longitude,
-        latitudeDelta: 0.3,
-        longitudeDelta: 0.3,
-      }}>
+      <MapView
+        style={{ flex: 1 }}
+        initialRegion={{
+          latitude: origin.latitude,
+          longitude: origin.longitude,
+          latitudeDelta: 0.3,
+          longitudeDelta: 0.3,
+        }}
+      >
         <MapViewDirections
           origin={origin}
           destination={destination}
