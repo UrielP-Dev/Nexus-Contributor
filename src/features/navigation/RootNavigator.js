@@ -4,6 +4,7 @@ import HomeScreen from '../auth/screens/HomeScreen';
 import LoginScreen from '../auth/screens/LoginScreen';
 import DashboardScreen from '../dashboard/screens/DashboardScreen';
 import ReferralsScreen from '../referrals/screens/ReferralsScreen';
+import RegisterScreen from '../RegisterForms/Screens/RegisterScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -28,6 +29,13 @@ export function RootNavigator() {
       <Stack.Screen 
         name="Referrals" 
         component={ReferralsScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
+        name="Register" 
+        component={RegisterScreen}
         options={{
           headerShown: false,
         }}

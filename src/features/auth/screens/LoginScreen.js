@@ -6,6 +6,10 @@ import { authService } from '../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '../../../context/UserContext';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import firebaseApp from '../../../config/firebase';
+
+const db = getFirestore(firebaseApp);
 
 const LoginScreen = ({ navigation }) => {
   const [employeeNumber, setEmployeeNumber] = useState('');
@@ -45,6 +49,10 @@ const LoginScreen = ({ navigation }) => {
 
       const userData = await authService.login(employeeNumber, password);
       await AsyncStorage.setItem('userData', JSON.stringify(userData));
+      
+      // Asegúrate de que el ID del usuario se actualice en el contexto
+      updateUser(userData);
+      
       navigation.replace('Dashboard', { userData });
     } catch (error) {
       Alert.alert('Error', error.message);

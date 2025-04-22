@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '../../../context/UserContext';
 import { referralService } from '../services/referralService';
@@ -8,7 +8,7 @@ import ReferralCard from '../components/ReferralCard';
 const ReferralsScreen = () => {
   const [referrals, setReferrals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useUser();
+  const { userData } = useUser();
 
   useEffect(() => {
     loadReferrals();
@@ -16,7 +16,11 @@ const ReferralsScreen = () => {
 
   const loadReferrals = async () => {
     try {
-      const referralData = await referralService.getReferralsByUser(user.id);
+      if (!userData?.employee_number) {
+        throw new Error('Número de empleado no disponible');
+      }
+      const referralData = await referralService.getReferralsByEmployeeNumber(userData.employee_number);
+      console.log('Datos de referidos:', referralData);
       setReferrals(referralData);
     } catch (error) {
       Alert.alert('Error', error.message);
@@ -37,7 +41,7 @@ const ReferralsScreen = () => {
     <SafeAreaView className="flex-1 bg-background">
       <View className="px-4 py-6">
         <Text className="text-h2 font-bold text-primary mb-4">
-          Mis Referidos
+          Mis Registros
         </Text>
         <FlatList
           data={referrals}
@@ -45,7 +49,7 @@ const ReferralsScreen = () => {
           renderItem={({ item }) => <ReferralCard referral={item} />}
           ListEmptyComponent={
             <Text className="text-center text-text-soft mt-4">
-              No tienes referidos registrados
+              No tienes registros
             </Text>
           }
         />
