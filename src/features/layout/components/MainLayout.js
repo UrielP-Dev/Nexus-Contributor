@@ -30,21 +30,24 @@ export default function MainLayout({ children, navigation }) {
               Alert.alert('Error', 'No se pudo cerrar sesión');
             }
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   const menuItems = [
-    { icon: 'home', label: 'Home', route: 'Dashboard' },
-    { icon: 'people', label: 'Referidos', route: 'Referrals' },
-    { icon: 'person', label: 'Profile', route: 'Profile' },
-    { icon: 'settings', label: 'Settings', route: 'Settings' },
-    { icon: 'create', label: 'Registro', route: 'Register' },
+    { icon: "home", label: "Home", route: "Dashboard" },
+    { icon: "person", label: "Ranking", route: "Ranking" },
+    { icon: "settings", label: "Settings", route: "Settings" },
+    { icon: "create", label: "Registro", route: "Register" },
   ];
 
   const Sidebar = () => (
-    <View className={`absolute left-0 top-0 h-full bg-white w-64 shadow-default z-50 ${isSidebarOpen ? 'flex' : 'hidden'}`}>
+    <View
+      className={`absolute left-0 top-0 h-full bg-white w-64 shadow-default z-50 ${
+        isSidebarOpen ? "flex" : "hidden"
+      }`}
+    >
       <View className="p-4 border-b border-border-neutral">
         <Text className="text-h4 font-bold text-primary">Nexus</Text>
       </View>
@@ -62,17 +65,19 @@ export default function MainLayout({ children, navigation }) {
             <Text className="ml-3 text-body text-text">{item.label}</Text>
           </TouchableOpacity>
         ))}
-        
+
         {/* Separador */}
         <View className="my-2 border-t border-border-neutral" />
-        
+
         {/* Botón de Logout */}
         <TouchableOpacity
           className="p-4 flex-row items-center"
           onPress={handleLogout}
         >
           <Ionicons name="log-out" size={24} color="#BA4B44" />
-          <Text className="ml-3 text-body text-semantic-error">Cerrar Sesión</Text>
+          <Text className="ml-3 text-body text-semantic-error">
+            Cerrar Sesión
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -104,13 +109,11 @@ export default function MainLayout({ children, navigation }) {
           </TouchableOpacity>
           <Text className="ml-4 text-h4 font-bold text-primary">Nexus</Text>
         </View>
-        
+
         <Sidebar />
-        
-        <View className="flex-1">
-          {children}
-        </View>
-        
+
+        <View className="flex-1">{children}</View>
+
         <BottomNav />
       </View>
     </SafeAreaView>
