@@ -32,6 +32,7 @@ export default function MainLayout({ children, navigation }) {
     { icon: "home", label: "Home", route: "Dashboard" },
     { icon: "person", label: "Ranking", route: "Ranking" },
     { icon: "settings", label: "Settings", route: "Settings" },
+    { icon: "create", label: "Registro", route: "Register" },
   ];
 
   const Sidebar = () => (
