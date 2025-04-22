@@ -40,6 +40,7 @@ export default function MainLayout({ children, navigation }) {
     { icon: 'people', label: 'Referidos', route: 'Referrals' },
     { icon: 'person', label: 'Profile', route: 'Profile' },
     { icon: 'settings', label: 'Settings', route: 'Settings' },
+    { icon: 'create', label: 'Registro', route: 'Register' },
   ];
 
   const Sidebar = () => (

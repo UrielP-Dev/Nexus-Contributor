@@ -65,7 +65,7 @@ const DashboardScreen = ({ navigation }) => {
         >
           <TouchableOpacity
             className="rounded-md overflow-hidden shadow-primary"
-            onPress={() => navigation.navigate('NewRegistration')}
+            onPress={() => navigation.navigate('Register')}
           >
             <LinearGradient
               colors={['#006FB9', '#194B7B']}
