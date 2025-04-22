@@ -3,74 +3,63 @@ import { View, Text } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-import { app } from '../../config/firebase'; // Asegúrate de importar tu configuración de Firebase correctamente
+import { app } from '../../config/firebase';
+
+const GOOGLE_MAPS_APIKEY = "AIzaSyAA8WEJzLQUMhR1p1Vucxi4g_cO3DVLGOM";
 
 const MapaGoogle = () => {
-  const GOOGLE_MAPS_APIKEY = "AIzaSyAA8WEJzLQUMhR1p1Vucxi4g_cO3DVLGOM";
   const [origin, setOrigin] = useState(null);
   const [destination, setDestination] = useState(null);
   const [waypoints, setWaypoints] = useState([]);
-
   const db = getFirestore(app);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchRoute = async () => {
       try {
-        const q = query(collection(db, "routes"), where("routeId", "==", "ChIJCUf06CHjqZUCgZwzXZpp"));
-        const querySnapshot = await getDocs(q);
-        console.log("querySnapshot", querySnapshot);
-        if (!querySnapshot.empty) {
-          const docData = querySnapshot.docs[0].data(); // Tomamos el primer resultado
-          setOrigin(docData.startPoint);
-          setDestination(docData.endPoint);
-          setWaypoints(docData.stops || []);
+        const q = query(collection(db, "routes"), where("routeId", "==", "ChIJpxjMIzfbp9FW2j5S1M0w"));
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data();
+          setOrigin(data.startPoint);
+          setDestination(data.endPoint);
+          setWaypoints(data.stops || []);
         } else {
-          console.log("No se encontró ninguna ruta con ese routeId.");
+          console.log("No se encontró la ruta.");
         }
-      } catch (error) {
-        console.error("Error al obtener documento:", error);
+      } catch (err) {
+        console.error("Error al obtener la ruta:", err);
       }
     };
 
-    fetchData();
+    fetchRoute();
   }, []);
 
   if (!origin || !destination) {
-    return (
-      <View>
-        <Text>Cargando mapa...</Text>
-      </View>
-    );
+    return <Text>Cargando mapa...</Text>;
   }
-
-  const region = {
-    latitude: origin.latitude,
-    longitude: origin.longitude,
-    latitudeDelta: 0.3,
-    longitudeDelta: 0.3,
-  };
 
   return (
     <View className="bg-background-box rounded-md shadow-default mb-6 h-[300px] w-full overflow-hidden">
-      <MapView style={{ flex: 1 }} initialRegion={region}>
+      <MapView style={{ flex: 1 }} initialRegion={{
+        latitude: origin.latitude,
+        longitude: origin.longitude,
+        latitudeDelta: 0.3,
+        longitudeDelta: 0.3,
+      }}>
         <MapViewDirections
           origin={origin}
           destination={destination}
           waypoints={waypoints}
           apikey={GOOGLE_MAPS_APIKEY}
           strokeWidth={4}
-          strokeColor="#0000FF"
+          strokeColor="#006FB9"
+          optimizeWaypoints={true}
         />
-
         <Marker coordinate={origin} title="Origen" />
         <Marker coordinate={destination} title="Destino" />
-        {waypoints.map((wp, i) => (
-          <Marker
-            key={i}
-            coordinate={wp}
-            title={`Parada ${i + 1}`}
-            pinColor="orange"
-          />
+        {waypoints.map((wp, idx) => (
+          <Marker key={idx} coordinate={wp} title={`Parada ${idx + 1}`} pinColor="orange" />
         ))}
       </MapView>
     </View>
