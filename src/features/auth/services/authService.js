@@ -51,7 +51,9 @@ export const authService = {
         throw new Error('Número de empleado o contraseña incorrectos');
       }
 
-      const userData = querySnapshot.docs[0].data();
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
+      userData.id = userDoc.id;
       return userData;
     } catch (error) {
       throw error;

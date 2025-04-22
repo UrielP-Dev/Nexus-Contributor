@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "../auth/screens/HomeScreen";
 import LoginScreen from "../auth/screens/LoginScreen";
 import DashboardScreen from "../dashboard/screens/DashboardScreen";
+import ReferralsScreen from '../referrals/screens/ReferralsScreen';
 import RegisterScreen from "../RegisterForms/Screens/RegisterScreen";
 import RankingScreen from "../ranking/screens/RankingScreen";
 
@@ -34,8 +35,15 @@ export function RootNavigator() {
           gestureEnabled: false,
         }}
       />
-      <Stack.Screen
-        name="Register"
+      <Stack.Screen 
+        name="Referrals" 
+        component={ReferralsScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
+        name="Register" 
         component={RegisterScreen}
         options={{
           headerShown: false,

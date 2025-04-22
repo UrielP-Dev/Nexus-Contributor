@@ -1,37 +1,44 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { authService } from "../../auth/services/authService";
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { authService } from '../../auth/services/authService';
+import { useUser } from '../../../context/UserContext';
 
 export default function MainLayout({ children, navigation }) {
+  const { clearUser } = useUser();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
-    Alert.alert("Cerrar Sesión", "¿Estás seguro que deseas cerrar sesión?", [
-      {
-        text: "Cancelar",
-        style: "cancel",
-      },
-      {
-        text: "Sí, cerrar sesión",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await authService.logout();
-            navigation.replace("Login");
-          } catch (error) {
-            Alert.alert("Error", "No se pudo cerrar sesión");
+    Alert.alert(
+      "Cerrar Sesión",
+      "¿Estás seguro que deseas cerrar sesión?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Sí, cerrar sesión",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await authService.logout();
+              clearUser();
+              navigation.replace('Login');
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo cerrar sesión');
+            }
           }
         },
-      },
+      
     ]);
   };
 
   const menuItems = [
     { icon: "home", label: "Home", route: "Dashboard" },
     { icon: "person", label: "Ranking", route: "Ranking" },
-    { icon: "settings", label: "Settings", route: "Settings" },
+    { icon: "people", label: "Referidos", route: "Referrals" },
     { icon: "create", label: "Registro", route: "Register" },
   ];
 
