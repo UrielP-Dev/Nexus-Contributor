@@ -1,0 +1,80 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import MapViewDirections from 'react-native-maps-directions';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { app } from '../../config/firebase'; // Asegúrate de importar tu configuración de Firebase correctamente
+
+const MapaGoogle = () => {
+  const GOOGLE_MAPS_APIKEY = "AIzaSyAA8WEJzLQUMhR1p1Vucxi4g_cO3DVLGOM";
+  const [origin, setOrigin] = useState(null);
+  const [destination, setDestination] = useState(null);
+  const [waypoints, setWaypoints] = useState([]);
+
+  const db = getFirestore(app);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const q = query(collection(db, "routes"), where("routeId", "==", "ChIJCUf06CHjqZUCgZwzXZpp"));
+        const querySnapshot = await getDocs(q);
+        console.log("querySnapshot", querySnapshot);
+        if (!querySnapshot.empty) {
+          const docData = querySnapshot.docs[0].data(); // Tomamos el primer resultado
+          setOrigin(docData.startPoint);
+          setDestination(docData.endPoint);
+          setWaypoints(docData.stops || []);
+        } else {
+          console.log("No se encontró ninguna ruta con ese routeId.");
+        }
+      } catch (error) {
+        console.error("Error al obtener documento:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (!origin || !destination) {
+    return (
+      <View>
+        <Text>Cargando mapa...</Text>
+      </View>
+    );
+  }
+
+  const region = {
+    latitude: origin.latitude,
+    longitude: origin.longitude,
+    latitudeDelta: 0.3,
+    longitudeDelta: 0.3,
+  };
+
+  return (
+    <View className="bg-background-box rounded-md shadow-default mb-6 h-[300px] w-full overflow-hidden">
+      <MapView style={{ flex: 1 }} initialRegion={region}>
+        <MapViewDirections
+          origin={origin}
+          destination={destination}
+          waypoints={waypoints}
+          apikey={GOOGLE_MAPS_APIKEY}
+          strokeWidth={4}
+          strokeColor="#0000FF"
+        />
+
+        <Marker coordinate={origin} title="Origen" />
+        <Marker coordinate={destination} title="Destino" />
+        {waypoints.map((wp, i) => (
+          <Marker
+            key={i}
+            coordinate={wp}
+            title={`Parada ${i + 1}`}
+            pinColor="orange"
+          />
+        ))}
+      </MapView>
+    </View>
+  );
+};
+
+export default MapaGoogle;
