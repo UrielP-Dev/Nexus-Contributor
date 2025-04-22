@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import MainLayout from '../../layout/components/MainLayout.js';
+import MapaGoogle from '../../../maps/Mapagoogle.js';
 
 const DashboardScreen = ({ navigation }) => {
   const pulseAnim = new Animated.Value(1);
@@ -52,8 +53,7 @@ const DashboardScreen = ({ navigation }) => {
         {/* Map Placeholder */}
         <View className="bg-background-box rounded-md shadow-default h-64 mb-6">
           <View className="items-center justify-center h-full">
-            <Ionicons name="map" size={48} color="#D9E3F2" />
-            <Text className="text-text-neutral mt-2">Mapa de registros (Próximamente)</Text>
+            <MapaGoogle />
           </View>
         </View>
 
