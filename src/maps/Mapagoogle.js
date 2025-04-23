@@ -3,7 +3,10 @@ import { View, Text } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-import { app } from '../config/firebase';
+import { app } from '../config/firebase'; // Asegúrate de que la ruta sea correcta
+import { useUser } from '../context/UserContext';
+
+const GOOGLE_MAPS_APIKEY = "AIzaSyAA8WEJzLQUMhR1p1Vucxi4g_cO3DVLGOM";
 
 const MapaGoogle = () => {
   const [origin, setOrigin] = useState(null);
@@ -12,6 +15,9 @@ const MapaGoogle = () => {
   const [error, setError] = useState(null);
   const db = getFirestore(app);
   const apikey = 'AIzaSyAA8WEJzLQUMhR1p1Vucxi4g_cO3DVLGOM';
+
+  // Obtener userData desde el contexto
+  const { userData } = useUser();
 
   useEffect(() => {
     console.log('apikey', apikey);
@@ -24,7 +30,13 @@ const MapaGoogle = () => {
 
     const fetchRoute = async () => {
       try {
-        const q = query(collection(db, "routes"), where("routeId", "==", "ChIJpxjMIzfbp9FW2j5S1M0w"));
+        // Verificar si userData y routeId están disponibles
+        if (!userData || !userData.routeId) {
+          console.log("No se encontró routeId en userData.");
+          return;
+        }
+        console.log(userData.routeId);
+        const q = query(collection(db, "routes"), where("routeId", "==", userData.routeId));
         const snapshot = await getDocs(q);
 
         if (!snapshot.empty) {
@@ -54,11 +66,7 @@ const MapaGoogle = () => {
     };
 
     fetchRoute();
-  }, []);
-
-  if (error) {
-    return <Text>{error}</Text>;
-  }
+  }, [userData]); // Escuchar cambios en userData
 
   if (!origin || !destination) {
     return <Text>Cargando mapa...</Text>;
@@ -85,31 +93,31 @@ const MapaGoogle = () => {
 
   return (
     <View className="bg-background-box rounded-md shadow-default mb-2 h-[225px] w-full overflow-hidden">
-      <MapView style={{ flex: 1 }} initialRegion={calculateRegion()}>
+            <MapView style={{ flex: 1 }} initialRegion={calculateRegion()}>
         <MapViewDirections
-          origin={{
-            latitude: parseFloat(origin.latitude),
-            longitude: parseFloat(origin.longitude)
-          }}
-          destination={{
-            latitude: parseFloat(destination.latitude),
-            longitude: parseFloat(destination.longitude)
-          }}
-          waypoints={waypoints.map(wp => ({
-            latitude: parseFloat(wp.latitude),
-            longitude: parseFloat(wp.longitude)
-          }))}
-          apikey={apikey}
-          strokeWidth={4}
-          strokeColor="#006FB9"
-          optimizeWaypoints={true}
-          onError={(errorMessage) => {
-            console.error('Error en la dirección:', errorMessage);
-            console.log('Origin:', origin);
-            console.log('Destination:', destination);
-            console.log('API Key length:', apikey?.length || 0);
-            setError('Error al cargar la ruta: ' + errorMessage);
-          }}
+        origin={{
+          latitude: parseFloat(origin.latitude),
+          longitude: parseFloat(origin.longitude)
+        }}
+        destination={{
+          latitude: parseFloat(destination.latitude),
+          longitude: parseFloat(destination.longitude)
+        }}
+        waypoints={waypoints.map(wp => ({
+          latitude: parseFloat(wp.latitude),
+          longitude: parseFloat(wp.longitude)
+        }))}
+        apikey={apikey}
+        strokeWidth={4}
+        strokeColor="#006FB9"
+        optimizeWaypoints={true}
+        onError={(errorMessage) => {
+          console.error('Error en la dirección:', errorMessage);
+          console.log('Origin:', origin);
+          console.log('Destination:', destination);
+          console.log('API Key length:', apikey?.length || 0);
+          setError('Error al cargar la ruta: ' + errorMessage);
+        }}
         />
         <Marker coordinate={origin} title="Origen" />
         <Marker coordinate={destination} title="Destino" />
