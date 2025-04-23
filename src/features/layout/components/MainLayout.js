@@ -146,10 +146,15 @@ export default function MainLayout({ children, navigation }) {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1"
-        onTouchStart={() => {
+      <View
+        className="flex-1"
+        pointerEvents={isSidebarOpen ? "box-none" : "auto"} // Permitir que los eventos táctiles pasen al sidebar
+        onTouchStart={(e) => {
           if (isSidebarOpen) {
-            setSidebarOpen(false); // Minimizar el sidebar al tocar fuera
+            const touchX = e.nativeEvent.pageX;
+            if (touchX > 256) { // Verifica si el toque está fuera del ancho del sidebar (256px)
+              setSidebarOpen(false); // Minimizar el sidebar al tocar fuera
+            }
           }
         }}
       >
