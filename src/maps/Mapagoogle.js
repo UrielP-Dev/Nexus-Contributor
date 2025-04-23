@@ -61,14 +61,28 @@ const MapaGoogle = () => {
     return <Text>Cargando mapa...</Text>;
   }
 
+  const calculateRegion = () => {
+    const allPoints = [origin, destination, ...waypoints];
+    const lats = allPoints.map(p => parseFloat(p.latitude));
+    const lngs = allPoints.map(p => parseFloat(p.longitude));
+    
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    
+    const padding = 0.005;
+    return {
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLng + maxLng) / 2,
+      latitudeDelta: (maxLat - minLat) + padding,
+      longitudeDelta: (maxLng - minLng) + padding
+    };
+  };
+
   return (
     <View className="bg-background-box rounded-md shadow-default mb-2 h-[225px] w-full overflow-hidden">
-      <MapView style={{ flex: 1 }} initialRegion={{
-        latitude: origin.latitude,
-        longitude: origin.longitude,
-        latitudeDelta: 0.3,
-        longitudeDelta: 0.3,
-      }}>
+      <MapView style={{ flex: 1 }} initialRegion={calculateRegion()}>
         <MapViewDirections
           origin={{
             latitude: parseFloat(origin.latitude),
