@@ -13,12 +13,15 @@ const MapaGoogle = () => {
   const [error, setError] = useState(null);
   const db = getFirestore(app);
 
-  if (!GOOGLE_MAPS_API_KEY) {
-    console.error('Error: API key de Google Maps no configurada');
-    return <Text>Error: API key no configurada</Text>;
-  }
-
   useEffect(() => {
+    console.log('GOOGLE_MAPS_API_KEY', GOOGLE_MAPS_API_KEY);
+    console.log('API KEY value:', GOOGLE_MAPS_API_KEY);
+    if (!GOOGLE_MAPS_API_KEY) {
+      console.error('Error: API key de Google Maps no configurada');
+      setError('Error: API key no configurada');
+      return;
+    }
+
     const fetchRoute = async () => {
       try {
         const q = query(collection(db, "routes"), where("routeId", "==", "ChIJpxjMIzfbp9FW2j5S1M0w"));
@@ -102,7 +105,10 @@ const MapaGoogle = () => {
           optimizeWaypoints={true}
           onError={(errorMessage) => {
             console.error('Error en la dirección:', errorMessage);
-            setError('Error al cargar la ruta');
+            console.log('Origin:', origin);
+            console.log('Destination:', destination);
+            console.log('API Key length:', GOOGLE_MAPS_API_KEY?.length || 0);
+            setError('Error al cargar la ruta: ' + errorMessage);
           }}
         />
         <Marker coordinate={origin} title="Origen" />
