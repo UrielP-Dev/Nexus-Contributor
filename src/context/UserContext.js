@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState } from "react";
 
 const UserContext = createContext(undefined);
 
@@ -20,22 +20,18 @@ export const UserProvider = ({ children }) => {
     user,
     userData,
     updateUser,
-    clearUser
+    clearUser,
   };
 
-  console.log('Estado actual del contexto:', value); // Para debugging
+  console.log("Estado actual del contexto:", value);
 
-  return (
-    <UserContext.Provider value={value}>
-      {children}
-    </UserContext.Provider>
-  );
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };
 
 export function useUser() {
   const context = useContext(UserContext);
   if (context === undefined) {
-    throw new Error('useUser debe ser usado dentro de un UserProvider');
+    throw new Error("useUser debe ser usado dentro de un UserProvider");
   }
   return context;
-} 
+}
