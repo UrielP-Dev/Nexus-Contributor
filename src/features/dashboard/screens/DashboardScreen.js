@@ -155,7 +155,17 @@ const DashboardScreen = ({ navigation }) => {
                       <Text className="text-text-soft ml-1">hacia {business.direction}</Text>
                     </View>
                   </View>
+                  <View className="mt-2">
+                  <Text className="text-sm font-bold text-primary mt-2">Sugerencia</Text>
+                  <Text className="text-sm text-text-soft">
+                    {business.type === 'Tienda' && 'Aprender a manejar inventarios y flujo de efectivo puede ayudarte a vender más y evitar pérdidas.'}
+                    {business.type === 'Estética' && 'Conocer tus costos fijos y variables te permitirá ofrecer promociones sin afectar tus ganancias.'}
+                    {business.type === 'Barbería' && 'Llevar un control financiero puede ayudarte a reinvertir mejor y atraer más clientes.'}
+                    {business.type === 'Papelería' && 'Saber cuándo y cuánto surtir te ayudará a mantenerte competitivo durante la temporada escolar.'}
+                  </Text>
+                  </View>
                 </TouchableOpacity>
+                 
               ))}
             </ScrollView>
           </View>
