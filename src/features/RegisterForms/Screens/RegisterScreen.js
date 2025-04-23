@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, Modal, ScrollView, Animated, Dimensions, Image, Pressable } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, Modal, ScrollView, Animated, Dimensions, Image, Pressable, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import { useUser } from '../../../context/UserContext';
 import { Ionicons } from '@expo/vector-icons';
 import MainLayout from '../../layout/components/MainLayout';
+import VoiceRecognizer from '../components/VoiceRecognizer';
 
 const { width } = Dimensions.get('window');
 
@@ -258,6 +259,15 @@ const RegisterScreen = ({ navigation }) => {
     });
   };
 
+  // Función para manejar los datos extraídos del reconocimiento de voz
+  const handleExtractedData = (data) => {
+    if (data.nombre) setName(data.nombre);
+    if (data.telefono) setPhoneNumber(data.telefono);
+    if (data.codigoPostal) setPostalCode(data.codigoPostal);
+    if (data.nombreNegocio) setBusinessName(data.nombreNegocio);
+    if (data.tipoNegocio) setBusinessType(data.tipoNegocio);
+  };
+
   return (
     <MainLayout navigation={navigation}>
       <ScrollView className="flex-1 bg-background">
@@ -307,6 +317,9 @@ const RegisterScreen = ({ navigation }) => {
             <Text className="text-lg font-semibold text-primary mb-4">
               Información del Microempresario
             </Text>
+            
+            {/* Componente de reconocimiento de voz */}
+            <VoiceRecognizer onDataExtracted={handleExtractedData} />
             
             <View className="space-y-4">
               <View>
