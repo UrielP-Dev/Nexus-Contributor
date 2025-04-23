@@ -93,39 +93,31 @@ const MapaGoogle = () => {
 
   return (
     <View className="bg-background-box rounded-md shadow-default mb-2 h-[225px] w-full overflow-hidden">
-      <MapView
-        style={{ flex: 1 }}
-        initialRegion={{
-          latitude: origin.latitude,
-          longitude: origin.longitude,
-          latitudeDelta: 0.3,
-          longitudeDelta: 0.3,
-        }}
-      >
+            <MapView style={{ flex: 1 }} initialRegion={calculateRegion()}>
         <MapViewDirections
-          origin={{
-            latitude: parseFloat(origin.latitude),
-            longitude: parseFloat(origin.longitude)
-          }}
-          destination={{
-            latitude: parseFloat(destination.latitude),
-            longitude: parseFloat(destination.longitude)
-          }}
-          waypoints={waypoints.map(wp => ({
-            latitude: parseFloat(wp.latitude),
-            longitude: parseFloat(wp.longitude)
-          }))}
-          apikey={apikey}
-          strokeWidth={4}
-          strokeColor="#006FB9"
-          optimizeWaypoints={true}
-          onError={(errorMessage) => {
-            console.error('Error en la dirección:', errorMessage);
-            console.log('Origin:', origin);
-            console.log('Destination:', destination);
-            console.log('API Key length:', apikey?.length || 0);
-            setError('Error al cargar la ruta: ' + errorMessage);
-          }}
+        origin={{
+          latitude: parseFloat(origin.latitude),
+          longitude: parseFloat(origin.longitude)
+        }}
+        destination={{
+          latitude: parseFloat(destination.latitude),
+          longitude: parseFloat(destination.longitude)
+        }}
+        waypoints={waypoints.map(wp => ({
+          latitude: parseFloat(wp.latitude),
+          longitude: parseFloat(wp.longitude)
+        }))}
+        apikey={apikey}
+        strokeWidth={4}
+        strokeColor="#006FB9"
+        optimizeWaypoints={true}
+        onError={(errorMessage) => {
+          console.error('Error en la dirección:', errorMessage);
+          console.log('Origin:', origin);
+          console.log('Destination:', destination);
+          console.log('API Key length:', apikey?.length || 0);
+          setError('Error al cargar la ruta: ' + errorMessage);
+        }}
         />
         <Marker coordinate={origin} title="Origen" />
         <Marker coordinate={destination} title="Destino" />
