@@ -35,6 +35,10 @@ const RegisterScreen = ({ navigation }) => {
   const [businessName, setBusinessName] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [showBusinessTypeMenu, setShowBusinessTypeMenu] = useState(false);
+  const [clientType, setClientType] = useState('');
+  const [showClientTypeMenu, setShowClientTypeMenu] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [enteredPin, setEnteredPin] = useState('');
   const [registeredUserId, setRegisteredUserId] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -57,21 +61,33 @@ const RegisterScreen = ({ navigation }) => {
   const carouselData = [
     {
       id: '1',
-      title: 'Registra Microempresarios',
-      description: 'Por cada microempresario registrado que complete cursos, aumentas tus posibilidades de incentivos.',
-      icon: '🚀',
+      title: '¿Cómo te llamas?',
+      description: 'Por favor, dime tu nombre completo para poder registrarte correctamente.',
+      icon: '🧑‍💼',
     },
     {
       id: '2',
-      title: 'Seguimiento Completo',
-      description: 'Monitorea el progreso de los cursos y las llaves obtenidas por cada microempresario.',
-      icon: '📊',
+      title: '¿Cuál es el nombre de tu negocio?',
+      description: '¿Cómo se llama el negocio que quieres registrar? Esto nos ayudará a identificarlo.',
+      icon: '🏪',
     },
     {
       id: '3',
-      title: 'Desbloquea Niveles',
-      description: 'Conforme tus referidos avancen, desbloquearás nuevos niveles de beneficios.',
-      icon: '🔓',
+      title: '¿A qué se dedica tu negocio?',
+      description: 'Cuéntame brevemente el giro o tipo de tu negocio (por ejemplo: abarrotes, comida, servicios, etc.).',
+      icon: '💼',
+    },
+    {
+      id: '4',
+      title: '¿Cuál es tu número de teléfono?',
+      description: 'Este número será tu acceso a la plataforma donde podrás tomar los cursos.',
+      icon: '📱',
+    },
+    {
+      id: '5',
+      title: '¿Actualmente eres cliente de Coppel?',
+      description: 'Cliente Bancoppel\n- Crédito Coppel\n- Afore Coppel\n- No soy cliente',
+      icon: '📝',
     },
   ];
 
@@ -111,6 +127,23 @@ const RegisterScreen = ({ navigation }) => {
         return;
       }
 
+      // Mostrar modal para ingresar PIN
+      setShowPinModal(true);
+    } catch (error) {
+      console.error('Error al registrar:', error);
+      Alert.alert('Error', error.message || 'Error al registrar microempresario');
+    }
+  };
+
+  const handlePinConfirm = async () => {
+    if (enteredPin !== FIXED_PIN) {
+      Alert.alert('Error', 'PIN incorrecto');
+      return;
+    }
+    
+    setShowPinModal(false);
+    
+    try {
       // Generar coordenadas aleatorias
       const locationData = getRandomLocation();
       console.log("Ubicación generada:", locationData);
@@ -118,12 +151,11 @@ const RegisterScreen = ({ navigation }) => {
       const db = getFirestore();
       const registersRef = collection(db, 'registers');
       
-      // Usar el número de empleado del usuario o un valor por defecto
       const referrerId = currentUser?.employee_number || 
                          currentUser?.employeeNumber || 
                          currentUser?.id || 
                          'guest-user';
-                         
+                       
       console.log("Número de empleado que se usará como ID de referidor:", referrerId);
       
       const docRef = await addDoc(registersRef, {
@@ -132,6 +164,7 @@ const RegisterScreen = ({ navigation }) => {
         postalCode,
         businessName: businessName || 'No especificado',
         businessType: businessType || 'No especificado',
+        clientType: clientType || 'No especificado',
         pin: FIXED_PIN,
         referrerId: referrerId,
         registrationDate: new Date().toISOString(),
@@ -139,7 +172,6 @@ const RegisterScreen = ({ navigation }) => {
         keysCollected: 0,
         webinarsCompleted: 0,
         created_at: new Date(),
-        // Agregar coordenadas de ubicación
         latitude: locationData.latitude,
         longitude: locationData.longitude
       });
@@ -156,12 +188,13 @@ const RegisterScreen = ({ navigation }) => {
           {
             text: 'Registrar otro',
             onPress: () => {
-              // Limpiar campos
               setName('');
               setPhoneNumber('');
               setPostalCode('');
               setBusinessName('');
               setBusinessType('');
+              setClientType('');
+              setEnteredPin(''); // Limpiar el PIN ingresado
             }
           }
         ]
@@ -200,6 +233,43 @@ const RegisterScreen = ({ navigation }) => {
                 }}
               >
                 <Text className={`text-body ${businessType === option ? 'text-primary font-bold' : 'text-text'}`}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const ClientTypeSelector = () => (
+    <Modal
+      visible={showClientTypeMenu}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowClientTypeMenu(false)}
+    >
+      <View className="flex-1 justify-end bg-black bg-opacity-50">
+        <View className="bg-white rounded-t-xl p-5">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-h3 font-bold text-primary">Tipo de Cliente</Text>
+            <TouchableOpacity onPress={() => setShowClientTypeMenu(false)}>
+              <Ionicons name="close" size={24} color="#006FB9" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView className="max-h-80">
+            {clientTypeOptions.map((option, index) => (
+              <TouchableOpacity 
+                key={index}
+                className={`p-4 ${index < clientTypeOptions.length - 1 ? 'border-b border-border-neutral' : ''}`}
+                onPress={() => {
+                  setClientType(option);
+                  setShowClientTypeMenu(false);
+                }}
+              >
+                <Text className={`text-body ${clientType === option ? 'text-primary font-bold' : 'text-text'}`}>
                   {option}
                 </Text>
               </TouchableOpacity>
@@ -377,6 +447,19 @@ const RegisterScreen = ({ navigation }) => {
                   <Ionicons name="chevron-down" size={20} color="#6B7280" />
                 </TouchableOpacity>
               </View>
+
+              <View>
+                <Text className="text-sm text-text-soft mb-1">¿Qué tipo de cliente eres?</Text>
+                <TouchableOpacity 
+                  className="bg-background-box p-4 rounded-lg border border-border-neutral flex-row justify-between"
+                  onPress={() => setShowClientTypeMenu(true)}
+                >
+                  <Text className={clientType ? "text-text" : "text-text-soft"}>
+                    {clientType || "Seleccionar una opción"}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <Text className="text-xs text-text-soft mt-4 mb-4">
@@ -413,8 +496,73 @@ const RegisterScreen = ({ navigation }) => {
       </ScrollView>
       
       <BusinessTypeSelector />
+      <ClientTypeSelector />
+      
+      {/* Modal para ingresar PIN */}
+      <Modal
+        visible={showPinModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowPinModal(false)}
+      >
+        <View className="flex-1 justify-center items-center bg-black bg-opacity-50 p-6">
+          <View className="bg-white rounded-xl p-6 w-full">
+            <Text className="text-h3 font-bold text-primary mb-4">Confirmar PIN</Text>
+            <Text className="text-body text-text-soft mb-4">
+              Ingrese su PIN de acceso (siempre será 0909)
+            </Text>
+            
+            <TextInput
+              className="bg-background-box p-4 rounded-lg border border-border-neutral mb-4"
+              placeholder="Ingrese PIN"
+              value={enteredPin}
+              onChangeText={setEnteredPin}
+              keyboardType="numeric"
+              secureTextEntry
+            />
+            
+            <View className="flex-row justify-end space-x-3">
+              <TouchableOpacity
+                className="px-4 py-2 rounded-lg"
+                onPress={() => {
+                  setShowPinModal(false);
+                  setEnteredPin(''); // Limpiar el PIN al cancelar
+                }}
+              >
+                <Text className="text-body text-primary">Cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                className="px-4 py-2 rounded-lg bg-primary"
+                onPress={handlePinConfirm}
+              >
+                <Text className="text-body text-white">Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </MainLayout>
   );
 };
 
 export default RegisterScreen;
+const businessTypeOptions = [
+  'Tienda de abarrotes',
+  'Restaurante/Comida',
+  'Servicios profesionales',
+  'Venta por catálogo',
+  'Artesanías',
+  'Papelería',
+  'Ropa y accesorios',
+  'Belleza y estética',
+  'Tecnología/Electrónica',
+  'Otro'
+];
+
+const clientTypeOptions = [
+  'Cliente Bancoppel',
+  'Crédito Coppel', 
+  'Afore Coppel',
+  'No soy cliente'
+];
