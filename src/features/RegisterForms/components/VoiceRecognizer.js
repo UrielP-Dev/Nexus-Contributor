@@ -1,6 +1,6 @@
 // components/VoiceRecognizer.js
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 import {
   View,
   Text,
@@ -18,15 +18,70 @@ import {
   WHISPER_MODEL_VERSION,
 } from "@env";
 
- 
-
-const VoiceRecognizer = ({ onDataExtracted }) => {
+const VoiceRecognizer = forwardRef(({ onDataExtracted }, ref) => {
+  const [hasPermission, setHasPermission] = useState(null);
   const [recording, setRecording] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [audioUri, setAudioUri] = useState(null);
+  const [transcribedText, setTranscribedText] = useState('');
+  const [extractedData, setExtractedData] = useState(null);
   const [permissionStatus, setPermissionStatus] = useState('pending') // 'pending', 'checking', 'granted', 'denied'
   const [isCheckingPermission, setIsCheckingPermission] = useState(false)
   const soundRef = useRef(null);
+
+  // Exponer métodos al componente padre a través de la referencia
+  useImperativeHandle(ref, () => ({
+    resetRecognizer: () => {
+      resetState();
+      requestPermissions();
+    }
+  }));
+
+  // Función para resetear el estado
+  const resetState = () => {
+    if (recording) {
+      stopRecording();
+    }
+    setHasPermission(null);
+    setRecording(null);
+    setIsProcessing(false);
+    setIsRecording(false);
+    setAudioUri(null);
+    setTranscribedText('');
+    setExtractedData(null);
+    setPermissionStatus('pending');
+    setIsCheckingPermission(false);
+  };
+
+  // Solicitar permisos de audio
+  const requestPermissions = async () => {
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      setHasPermission(status === 'granted');
+    } catch (err) {
+      console.warn('Error al solicitar permisos:', err);
+      setHasPermission(false);
+    }
+  };
+
+  // Solicitar permisos al montar el componente
+  useEffect(() => {
+    requestPermissions();
+    
+    // Configuración de audio
+    Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+    });
+    
+    return () => {
+      // Limpiar al desmontar
+      if (recording) {
+        stopRecording();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     // Solicitar permisos de micrófono al cargar el componente
@@ -378,20 +433,49 @@ Responde con un JSON con este formato exacto:
 
   const extractDataWithOpenAI = async (transcribedText) => {
     try {
+      const businessTypeOptions = [
+        'Tienda de abarrotes',
+        'Restaurante/Comida',
+        'Servicios profesionales',
+        'Venta por catálogo',
+        'Artesanías',
+        'Papelería',
+        'Ropa y accesorios',
+        'Belleza y estética',
+        'Tecnología/Electrónica',
+        'Otro'
+      ];
+
+      const clientTypeOptions = [
+        'Cliente Bancoppel',
+        'Crédito Coppel', 
+        'Afore Coppel',
+        'No soy cliente'
+      ];
+
       const prompt = `
-  Extrae estos campos de la transcripción:
-  nombre completo, teléfono, código postal, nombre del negocio, tipo de negocio.
-  Devuélvelos en JSON:
-  {
-    "nombre": "...",
-    "telefono": "...",
-    "codigoPostal": "...",
-    "nombreNegocio": "...",
-    "tipoNegocio": "..."
-  }
-  Transcripción:
-  "${transcribedText}"
-  `;
+Extrae estos campos de la transcripción:
+nombre completo, teléfono, código postal, nombre del negocio, tipo de negocio, si es cliente de Coppel o no.
+
+Para tipo de negocio, selecciona la opción más adecuada de esta lista:
+${businessTypeOptions.join(', ')}
+
+Para si es cliente de Coppel, selecciona la opción más adecuada de esta lista:
+${clientTypeOptions.join(', ')}
+
+Devuélvelos en JSON exactamente en este formato:
+{
+  "nombre": "...",
+  "telefono": "...",
+  "codigoPostal": "...",
+  "nombreNegocio": "...",
+  "tipoNegocio": "...",
+  "clienteCoppel": "..."
+}
+
+Transcripción:
+"${transcribedText}"
+`;
       console.log("Enviando a OpenAI:", prompt);
 
       const chatRes = await fetch(
@@ -406,67 +490,81 @@ Responde con un JSON con este formato exacto:
             model: "gpt-4",
             messages: [{ role: "user", content: prompt }],
             temperature: 0,
-            // Removido response_format que estaba causando el error
           }),
         }
       );
 
       if (!chatRes.ok) {
-        const errorText = await chatRes.text();
-        console.error("Error respuesta OpenAI:", errorText);
-        throw new Error(
-          `Error en OpenAI API: ${chatRes.status} - ${errorText}`
-        );
+        console.warn('Error en la respuesta de OpenAI:', await chatRes.text());
+        return {}; // Devolver objeto vacío en caso de error
       }
 
-      const chatJson = await chatRes.json();
-      console.log("Respuesta de OpenAI:", JSON.stringify(chatJson, null, 2));
+      const chatData = await chatRes.json();
+      console.log("Respuesta de OpenAI:", chatData);
 
-      const content = chatJson.choices[0].message.content.trim();
-      console.log("Contenido a parsear:", content);
-
-      // Verificar si el contenido parece un JSON válido
-      if (!content.startsWith("{") || !content.endsWith("}")) {
-        console.error("La respuesta no tiene formato JSON válido:", content);
-        // Intentar extraer JSON si está entre comillas, markdown, etc.
-        const jsonMatch = content.match(/\{.*\}/s);
-        if (jsonMatch) {
-          const extractedJson = jsonMatch[0];
-          console.log("JSON extraído de la respuesta:", extractedJson);
-          return JSON.parse(extractedJson);
-        }
-
-        // Si no se puede extraer, crear un objeto con la información disponible
-        return {
-          nombre: transcribedText,
-          telefono: "",
-          codigoPostal: "",
-          nombreNegocio: "",
-          tipoNegocio: "",
-        };
+      if (!chatData.choices || !chatData.choices[0] || !chatData.choices[0].message) {
+        console.warn("Formato de respuesta OpenAI inesperado:", chatData);
+        return {}; // Devolver objeto vacío si no se encuentra la estructura esperada
       }
+
+      const content = chatData.choices[0].message.content;
+      console.log("Contenido extraído:", content);
 
       try {
-        return JSON.parse(content);
+        const extractedData = JSON.parse(content);
+        
+        // Filtrar y validar campos antes de devolverlos
+        const validData = {};
+        
+        // Solo incluir campos que tengan datos y sean válidos
+        if (extractedData.nombre && typeof extractedData.nombre === 'string') {
+          validData.nombre = extractedData.nombre;
+        }
+        
+        if (extractedData.telefono && typeof extractedData.telefono === 'string') {
+          // Limpiar el número de teléfono (solo dígitos)
+          validData.telefono = extractedData.telefono.replace(/\D/g, '');
+        }
+        
+        if (extractedData.codigoPostal && typeof extractedData.codigoPostal === 'string') {
+          // Limpiar el código postal (solo dígitos)
+          validData.codigoPostal = extractedData.codigoPostal.replace(/\D/g, '');
+        }
+        
+        if (extractedData.nombreNegocio && typeof extractedData.nombreNegocio === 'string') {
+          validData.nombreNegocio = extractedData.nombreNegocio;
+        }
+        
+        // Validar que el tipo de negocio sea una de las opciones válidas
+        if (extractedData.tipoNegocio && 
+            typeof extractedData.tipoNegocio === 'string' && 
+            businessTypeOptions.includes(extractedData.tipoNegocio)) {
+          validData.tipoNegocio = extractedData.tipoNegocio;
+        }
+        
+        // Validar que el tipo de cliente sea una de las opciones válidas
+        if (extractedData.clienteCoppel && 
+            typeof extractedData.clienteCoppel === 'string' && 
+            clientTypeOptions.includes(extractedData.clienteCoppel)) {
+          validData.clienteCoppel = extractedData.clienteCoppel;
+        }
+        
+        console.log("Datos validados:", validData);
+        return validData;
+        
       } catch (parseError) {
-        console.error(
+        console.warn(
           "Error al parsear JSON:",
           parseError,
           "Contenido:",
           content
         );
-        // Devolver un objeto con valores por defecto
-        return {
-          nombre: transcribedText,
-          telefono: "",
-          codigoPostal: "",
-          nombreNegocio: "",
-          tipoNegocio: "",
-        };
+        return {}; // Devolver objeto vacío en caso de error
       }
+      
     } catch (error) {
-      console.error("Error extrayendo datos con OpenAI:", error);
-      throw new Error(`Error procesando datos: ${error.message}`);
+      console.warn("Error en extractDataWithOpenAI:", error);
+      return {}; // Devolver objeto vacío en caso de error
     }
   };
 
@@ -664,6 +762,6 @@ Responde con un JSON con este formato exacto:
       )}
     </View>
   );
-};
+});
 
 export default VoiceRecognizer;
