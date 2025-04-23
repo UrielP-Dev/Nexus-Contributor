@@ -1,6 +1,6 @@
 // components/VoiceRecognizer.js
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 import {
   View,
   Text,
@@ -18,16 +18,70 @@ import {
   WHISPER_MODEL_VERSION,
 } from "@env";
 
-// ----------------------------------------------------------------------------
-// 🚨 IMPORTANTE: En producción, mueve tus API keys a tu backend o variables
-//               seguras (app.json → expo.extra)
-// ----------------------------------------------------------------------------
-
-const VoiceRecognizer = ({ onDataExtracted }) => {
+const VoiceRecognizer = forwardRef(({ onDataExtracted }, ref) => {
+  const [hasPermission, setHasPermission] = useState(null);
   const [recording, setRecording] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [audioUri, setAudioUri] = useState(null);
+  const [transcribedText, setTranscribedText] = useState('');
+  const [extractedData, setExtractedData] = useState(null);
+  const [permissionStatus, setPermissionStatus] = useState('pending') // 'pending', 'checking', 'granted', 'denied'
+  const [isCheckingPermission, setIsCheckingPermission] = useState(false)
   const soundRef = useRef(null);
+
+  // Exponer métodos al componente padre a través de la referencia
+  useImperativeHandle(ref, () => ({
+    resetRecognizer: () => {
+      resetState();
+      requestPermissions();
+    }
+  }));
+
+  // Función para resetear el estado
+  const resetState = () => {
+    if (recording) {
+      stopRecording();
+    }
+    setHasPermission(null);
+    setRecording(null);
+    setIsProcessing(false);
+    setIsRecording(false);
+    setAudioUri(null);
+    setTranscribedText('');
+    setExtractedData(null);
+    setPermissionStatus('pending');
+    setIsCheckingPermission(false);
+  };
+
+  // Solicitar permisos de audio
+  const requestPermissions = async () => {
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      setHasPermission(status === 'granted');
+    } catch (err) {
+      console.warn('Error al solicitar permisos:', err);
+      setHasPermission(false);
+    }
+  };
+
+  // Solicitar permisos al montar el componente
+  useEffect(() => {
+    requestPermissions();
+    
+    // Configuración de audio
+    Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+    });
+    
+    return () => {
+      // Limpiar al desmontar
+      if (recording) {
+        stopRecording();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     // Solicitar permisos de micrófono al cargar el componente
@@ -39,7 +93,200 @@ const VoiceRecognizer = ({ onDataExtracted }) => {
     })();
   }, []);
 
+  const requestVerbalPermission = async () => {
+    setIsCheckingPermission(true)
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      })
+      
+      Alert.alert(
+        'Solicitud de permiso',
+        'Por favor, diga claramente al microempresario: "¿Me permite grabar nuestra conversación?"',
+        [
+          { text: 'Continuar', onPress: () => checkVerbalPermission() }
+        ]
+      )
+    } catch (err) {
+      console.error('Error al preparar solicitud de permiso:', err)
+      Alert.alert('Error', 'No se pudo iniciar la verificación de permiso')
+      setIsCheckingPermission(false)
+    }
+  }
+
+  const checkVerbalPermission = async () => {
+    setPermissionStatus('checking')
+    try {
+      const rec = new Audio.Recording()
+      await rec.prepareToRecordAsync({
+        android: {
+          extension: '.m4a',
+          outputFormat: Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_MPEG_4,
+          audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AAC,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.m4a',
+          audioQuality: Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_HIGH,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+          outputFormat: Audio.RECORDING_OPTION_IOS_OUTPUT_FORMAT_MPEG4AAC,
+        },
+      })
+      
+      await rec.startAsync()
+      
+      // Grabar durante 5 segundos para capturar la respuesta
+      setTimeout(async () => {
+        await stopPermissionRecording(rec)
+      }, 5000)
+      
+      Alert.alert('Grabando respuesta', 'Esperando respuesta del microempresario...')
+      
+    } catch (err) {
+      console.error('Error al verificar permiso verbal:', err)
+      Alert.alert('Error', 'No se pudo grabar la respuesta de permiso')
+      setPermissionStatus('pending')
+      setIsCheckingPermission(false)
+    }
+  }
+
+  const stopPermissionRecording = async (rec) => {
+    try {
+      await rec.stopAndUnloadAsync()
+      const uri = rec.getURI()
+      setIsProcessing(true)
+
+      // Guardar en documentDirectory con extensión correcta
+      const newPath = FileSystem.documentDirectory + 'permission_audio.m4a'
+      await FileSystem.copyAsync({ from: uri, to: newPath })
+
+      // Leer base64
+      const base64Audio = await FileSystem.readAsStringAsync(newPath, {
+        encoding: FileSystem.EncodingType.Base64,
+      })
+      const audioDataUrl = `data:audio/m4a;base64,${base64Audio}`
+
+      // Transcribir respuesta usando el mismo método que la grabación principal
+      const transcribedText = await transcribeAudioWithReplicate(audioDataUrl)
+      
+      // Usar OpenAI para analizar la respuesta con más precisión
+      const permissionResult = await analyzePermissionWithOpenAI(transcribedText)
+      
+      if (permissionResult.isGranted) {
+        setPermissionStatus('granted')
+        Alert.alert('Permiso concedido', `El microempresario ha dado su permiso: "${permissionResult.detectedResponse}"`)
+      } else {
+        setPermissionStatus('denied')
+        Alert.alert('Permiso denegado', `El microempresario no ha dado permiso. Respuesta detectada: "${permissionResult.detectedResponse}"`)
+      }
+    } catch (err) {
+      console.error('Error procesando verificación de permiso:', err)
+      Alert.alert('Error', 'No se pudo procesar la respuesta de permiso: ' + err.message)
+      setPermissionStatus('pending')
+    } finally {
+      setIsCheckingPermission(false)
+      setIsProcessing(false)
+    }
+  }
+
+  // Nuevo método que usa OpenAI para analizar la respuesta de permiso
+  const analyzePermissionWithOpenAI = async (transcribedText) => {
+    try {
+      const prompt = `
+Analiza esta transcripción de audio y determina si la persona da su permiso para ser grabada en una conversación.
+
+Transcripción:
+"${transcribedText}"
+
+Considera diversos tipos de respuestas positivas como:
+- Afirmaciones directas: "sí", "claro", "por supuesto"
+- Afirmaciones indirectas: "adelante", "no hay problema", "está bien", "no me molesta"
+- Afirmaciones contextuales: "puede grabar", "tiene mi permiso", "lo autorizo"
+- Afirmaciones con condiciones: "sí, pero solo para esto", "está bien por esta vez"
+
+Y negativas como:
+- Negaciones directas: "no", "no quiero"
+- Negaciones indirectas: "prefiero que no", "mejor no", "ahora no"
+- Evasivas: "después hablamos", "en otro momento", "no estoy seguro"
+- Preguntas sin respuesta clara: "¿para qué es?", "¿es necesario?"
+
+Responde con un JSON con este formato exacto:
+{
+  "isGranted": true/false,
+  "detectedResponse": "la parte específica de la transcripción que indica permiso o negativa",
+  "confidence": "alta/media/baja",
+  "explanation": "breve explicación de por qué se interpreta como permiso o negativa"
+}
+`
+      
+      const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0
+        }),
+      })
+      
+      if (!chatRes.ok) {
+        const errorText = await chatRes.text()
+        console.error('Error respuesta OpenAI:', errorText)
+        throw new Error(`Error en OpenAI API: ${chatRes.status} - ${errorText}`)
+      }
+      
+      const chatJson = await chatRes.json()
+      console.log('Análisis de permiso de OpenAI:', JSON.stringify(chatJson, null, 2))
+      
+      const content = chatJson.choices[0].message.content.trim()
+      
+      // Extraer JSON de la respuesta
+      let jsonMatch = content;
+      if (!content.startsWith('{')) {
+        jsonMatch = content.match(/\{.*\}/s)
+        if (!jsonMatch) {
+          throw new Error('No se pudo extraer JSON de la respuesta')
+        }
+        jsonMatch = jsonMatch[0]
+      }
+      
+      const result = JSON.parse(jsonMatch)
+      return result
+    } catch (error) {
+      console.error('Error analizando permiso con OpenAI:', error)
+      // En caso de error, hacemos un análisis simple como fallback
+      return {
+        isGranted: checkIfPermissionGranted(transcribedText),
+        detectedResponse: transcribedText,
+        confidence: "baja"
+      }
+    }
+  }
+
+  // Mantener el método simple como fallback
+  const checkIfPermissionGranted = (text) => {
+    // Convertir a minúsculas y buscar respuestas afirmativas en español
+    const lowerText = text.toLowerCase()
+    const affirmativeResponses = ['sí', 'si', 'claro', 'adelante', 'por supuesto', 'está bien', 'de acuerdo', 'afirmativo']
+    
+    return affirmativeResponses.some(response => lowerText.includes(response))
+  }
+
   const startRecording = async () => {
+    // Verificar que tenemos permiso verbal antes de grabar
+    if (permissionStatus !== 'granted') {
+      Alert.alert('Permiso requerido', 'Debe obtener permiso verbal antes de grabar')
+      return
+    }
+    
     try {
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
@@ -186,20 +433,49 @@ const VoiceRecognizer = ({ onDataExtracted }) => {
 
   const extractDataWithOpenAI = async (transcribedText) => {
     try {
+      const businessTypeOptions = [
+        'Tienda de abarrotes',
+        'Restaurante/Comida',
+        'Servicios profesionales',
+        'Venta por catálogo',
+        'Artesanías',
+        'Papelería',
+        'Ropa y accesorios',
+        'Belleza y estética',
+        'Tecnología/Electrónica',
+        'Otro'
+      ];
+
+      const clientTypeOptions = [
+        'Cliente Bancoppel',
+        'Crédito Coppel', 
+        'Afore Coppel',
+        'No soy cliente'
+      ];
+
       const prompt = `
-  Extrae estos campos de la transcripción:
-  nombre completo, teléfono, código postal, nombre del negocio, tipo de negocio.
-  Devuélvelos en JSON:
-  {
-    "nombre": "...",
-    "telefono": "...",
-    "codigoPostal": "...",
-    "nombreNegocio": "...",
-    "tipoNegocio": "..."
-  }
-  Transcripción:
-  "${transcribedText}"
-  `;
+Extrae estos campos de la transcripción:
+nombre completo, teléfono, código postal, nombre del negocio, tipo de negocio, si es cliente de Coppel o no.
+
+Para tipo de negocio, selecciona la opción más adecuada de esta lista:
+${businessTypeOptions.join(', ')}
+
+Para si es cliente de Coppel, selecciona la opción más adecuada de esta lista:
+${clientTypeOptions.join(', ')}
+
+Devuélvelos en JSON exactamente en este formato:
+{
+  "nombre": "...",
+  "telefono": "...",
+  "codigoPostal": "...",
+  "nombreNegocio": "...",
+  "tipoNegocio": "...",
+  "clienteCoppel": "..."
+}
+
+Transcripción:
+"${transcribedText}"
+`;
       console.log("Enviando a OpenAI:", prompt);
 
       const chatRes = await fetch(
@@ -214,67 +490,81 @@ const VoiceRecognizer = ({ onDataExtracted }) => {
             model: "gpt-4",
             messages: [{ role: "user", content: prompt }],
             temperature: 0,
-            // Removido response_format que estaba causando el error
           }),
         }
       );
 
       if (!chatRes.ok) {
-        const errorText = await chatRes.text();
-        console.error("Error respuesta OpenAI:", errorText);
-        throw new Error(
-          `Error en OpenAI API: ${chatRes.status} - ${errorText}`
-        );
+        console.warn('Error en la respuesta de OpenAI:', await chatRes.text());
+        return {}; // Devolver objeto vacío en caso de error
       }
 
-      const chatJson = await chatRes.json();
-      console.log("Respuesta de OpenAI:", JSON.stringify(chatJson, null, 2));
+      const chatData = await chatRes.json();
+      console.log("Respuesta de OpenAI:", chatData);
 
-      const content = chatJson.choices[0].message.content.trim();
-      console.log("Contenido a parsear:", content);
-
-      // Verificar si el contenido parece un JSON válido
-      if (!content.startsWith("{") || !content.endsWith("}")) {
-        console.error("La respuesta no tiene formato JSON válido:", content);
-        // Intentar extraer JSON si está entre comillas, markdown, etc.
-        const jsonMatch = content.match(/\{.*\}/s);
-        if (jsonMatch) {
-          const extractedJson = jsonMatch[0];
-          console.log("JSON extraído de la respuesta:", extractedJson);
-          return JSON.parse(extractedJson);
-        }
-
-        // Si no se puede extraer, crear un objeto con la información disponible
-        return {
-          nombre: transcribedText,
-          telefono: "",
-          codigoPostal: "",
-          nombreNegocio: "",
-          tipoNegocio: "",
-        };
+      if (!chatData.choices || !chatData.choices[0] || !chatData.choices[0].message) {
+        console.warn("Formato de respuesta OpenAI inesperado:", chatData);
+        return {}; // Devolver objeto vacío si no se encuentra la estructura esperada
       }
+
+      const content = chatData.choices[0].message.content;
+      console.log("Contenido extraído:", content);
 
       try {
-        return JSON.parse(content);
+        const extractedData = JSON.parse(content);
+        
+        // Filtrar y validar campos antes de devolverlos
+        const validData = {};
+        
+        // Solo incluir campos que tengan datos y sean válidos
+        if (extractedData.nombre && typeof extractedData.nombre === 'string') {
+          validData.nombre = extractedData.nombre;
+        }
+        
+        if (extractedData.telefono && typeof extractedData.telefono === 'string') {
+          // Limpiar el número de teléfono (solo dígitos)
+          validData.telefono = extractedData.telefono.replace(/\D/g, '');
+        }
+        
+        if (extractedData.codigoPostal && typeof extractedData.codigoPostal === 'string') {
+          // Limpiar el código postal (solo dígitos)
+          validData.codigoPostal = extractedData.codigoPostal.replace(/\D/g, '');
+        }
+        
+        if (extractedData.nombreNegocio && typeof extractedData.nombreNegocio === 'string') {
+          validData.nombreNegocio = extractedData.nombreNegocio;
+        }
+        
+        // Validar que el tipo de negocio sea una de las opciones válidas
+        if (extractedData.tipoNegocio && 
+            typeof extractedData.tipoNegocio === 'string' && 
+            businessTypeOptions.includes(extractedData.tipoNegocio)) {
+          validData.tipoNegocio = extractedData.tipoNegocio;
+        }
+        
+        // Validar que el tipo de cliente sea una de las opciones válidas
+        if (extractedData.clienteCoppel && 
+            typeof extractedData.clienteCoppel === 'string' && 
+            clientTypeOptions.includes(extractedData.clienteCoppel)) {
+          validData.clienteCoppel = extractedData.clienteCoppel;
+        }
+        
+        console.log("Datos validados:", validData);
+        return validData;
+        
       } catch (parseError) {
-        console.error(
+        console.warn(
           "Error al parsear JSON:",
           parseError,
           "Contenido:",
           content
         );
-        // Devolver un objeto con valores por defecto
-        return {
-          nombre: transcribedText,
-          telefono: "",
-          codigoPostal: "",
-          nombreNegocio: "",
-          tipoNegocio: "",
-        };
+        return {}; // Devolver objeto vacío en caso de error
       }
+      
     } catch (error) {
-      console.error("Error extrayendo datos con OpenAI:", error);
-      throw new Error(`Error procesando datos: ${error.message}`);
+      console.warn("Error en extractDataWithOpenAI:", error);
+      return {}; // Devolver objeto vacío en caso de error
     }
   };
 
@@ -293,33 +583,161 @@ const VoiceRecognizer = ({ onDataExtracted }) => {
 
   return (
     <View style={{ margin: 16 }}>
-      <TouchableOpacity
-        disabled={isProcessing}
-        onPress={recording ? stopRecording : startRecording}
-        style={{
-          backgroundColor: recording ? "#D32F2F" : "#1976D2",
-          padding: 12,
+      {permissionStatus === 'pending' && (
+        <View style={{ marginBottom: 20 }}>
+          <View style={{ 
+            backgroundColor: '#FFF9C4', 
+            padding: 12, 
+            borderRadius: 8, 
+            marginBottom: 16,
+            borderLeftWidth: 4,
+            borderLeftColor: '#FBC02D',
+            flexDirection: 'row',
+            alignItems: 'center'
+          }}>
+            <Ionicons name="alert-circle" size={24} color="#FBC02D" style={{ marginRight: 10 }} />
+            <View>
+              <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Permiso requerido</Text>
+              <Text>Antes de grabar, debe obtener autorización verbal del microempresario</Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity
+            disabled={isCheckingPermission}
+            onPress={requestVerbalPermission}
+            style={{
+              backgroundColor: '#4CAF50',
+              padding: 16,
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              elevation: 2,
+            }}
+          >
+            <Ionicons name="mic" size={24} color="#fff" />
+            <Text style={{ color: '#fff', marginLeft: 10, fontWeight: 'bold', fontSize: 16 }}>
+              {isCheckingPermission ? 'Verificando permiso...' : 'Solicitar permiso verbal'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      
+      {permissionStatus === 'checking' && (
+        <View style={{ 
+          marginBottom: 20, 
+          alignItems: 'center',
+          backgroundColor: '#E3F2FD',
+          padding: 20,
           borderRadius: 8,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Ionicons name={recording ? "stop" : "mic"} size={20} color="#fff" />
-        <Text style={{ color: "#fff", marginLeft: 8, fontWeight: "bold" }}>
-          {isProcessing
-            ? "Procesando…"
-            : recording
-            ? "Detener"
-            : "Grabar y enviar"}
-        </Text>
-      </TouchableOpacity>
-
+        }}>
+          <ActivityIndicator size="large" color="#2196F3" />
+          <Text style={{ marginTop: 12, color: '#0D47A1', fontWeight: 'bold', fontSize: 16 }}>
+            Analizando respuesta...
+          </Text>
+          <Text style={{ marginTop: 8, color: '#1976D2', textAlign: 'center' }}>
+            Estamos verificando si el microempresario otorgó permiso para grabar
+          </Text>
+        </View>
+      )}
+      
+      {(permissionStatus === 'granted') && (
+        <View style={{ marginBottom: 20 }}>
+          <View style={{ 
+            backgroundColor: '#E8F5E9', 
+            padding: 12, 
+            borderRadius: 8, 
+            marginBottom: 16,
+            borderLeftWidth: 4,
+            borderLeftColor: '#4CAF50',
+            flexDirection: 'row',
+            alignItems: 'center'
+          }}>
+            <Ionicons name="checkmark-circle" size={24} color="#4CAF50" style={{ marginRight: 10 }} />
+            <View>
+              <Text style={{ fontWeight: 'bold', color: '#2E7D32', marginBottom: 4 }}>Permiso concedido</Text>
+              <Text style={{ color: '#388E3C' }}>El microempresario autorizó la grabación</Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity
+            disabled={isProcessing}
+            onPress={recording ? stopRecording : startRecording}
+            style={{
+              backgroundColor: recording ? '#D32F2F' : '#1976D2',
+              padding: 16,
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              elevation: 2,
+            }}
+          >
+            <Ionicons 
+              name={isProcessing ? 'hourglass' : recording ? 'stop-circle' : 'mic'} 
+              size={24} 
+              color="#fff" 
+            />
+            <Text style={{ color: '#fff', marginLeft: 10, fontWeight: 'bold', fontSize: 16 }}>
+              {isProcessing ? 'Procesando…' : recording ? 'Detener grabación' : 'Grabar conversación'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      
+      {permissionStatus === 'denied' && (
+        <View style={{ marginBottom: 20 }}>
+          <View style={{ 
+            backgroundColor: '#FFEBEE', 
+            padding: 12, 
+            borderRadius: 8, 
+            marginBottom: 16,
+            borderLeftWidth: 4,
+            borderLeftColor: '#D32F2F',
+            flexDirection: 'row',
+            alignItems: 'center'
+          }}>
+            <Ionicons name="close-circle" size={24} color="#D32F2F" style={{ marginRight: 10 }} />
+            <View>
+              <Text style={{ fontWeight: 'bold', color: '#C62828', marginBottom: 4 }}>Permiso denegado</Text>
+              <Text style={{ color: '#D32F2F' }}>No se puede grabar sin autorización verbal</Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity
+            onPress={() => setPermissionStatus('pending')}
+            style={{ 
+              padding: 16, 
+              backgroundColor: '#D32F2F', 
+              borderRadius: 8, 
+              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              elevation: 2,
+            }}
+          >
+            <Ionicons name="refresh" size={24} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Intentar nuevamente</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      
       {isProcessing && (
-        <View style={{ marginTop: 16, alignItems: "center" }}>
+        <View style={{ 
+          marginTop: 20, 
+          alignItems: 'center',
+          backgroundColor: '#E8F5E9',
+          padding: 20,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: '#C8E6C9'
+        }}>
           <ActivityIndicator size="large" color="#1976D2" />
-          <Text style={{ marginTop: 8, color: "#666" }}>
-            Procesando audio, esto puede tardar un momento...
+          <Text style={{ marginTop: 12, color: '#1976D2', fontWeight: 'bold', fontSize: 16 }}>
+            Procesando audio
+          </Text>
+          <Text style={{ marginTop: 8, color: '#388E3C', textAlign: 'center' }}>
+            Esto puede tardar un momento. Estamos analizando la conversación...
           </Text>
         </View>
       )}
@@ -330,19 +748,20 @@ const VoiceRecognizer = ({ onDataExtracted }) => {
           style={{
             marginTop: 16,
             padding: 12,
-            backgroundColor: "#4CAF50",
+            backgroundColor: '#673AB7',
             borderRadius: 8,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            elevation: 2,
           }}
         >
-          <Ionicons name="play" size={20} color="#fff" />
-          <Text style={{ color: "#fff", marginLeft: 8 }}>Reproducir audio</Text>
+          <Ionicons name="play-circle" size={24} color="#fff" />
+          <Text style={{ color: '#fff', marginLeft: 10, fontWeight: 'bold' }}>Reproducir grabación</Text>
         </TouchableOpacity>
       )}
     </View>
   );
-};
+});
 
 export default VoiceRecognizer;

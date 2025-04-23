@@ -42,6 +42,7 @@ const RegisterScreen = ({ navigation }) => {
   const [registeredUserId, setRegisteredUserId] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
+  const voiceRecognizerRef = useRef(null);
 
   // Opciones de tipo de negocio
   const businessTypeOptions = [
@@ -179,7 +180,7 @@ const RegisterScreen = ({ navigation }) => {
       setRegisteredUserId(docRef.id);
       Alert.alert(
         '¡Registro Exitoso!', 
-        `El microempresario ha sido registrado correctamente. Su PIN de acceso es: ${FIXED_PIN}`,
+        `El microempresario ha sido registrado correctamente.`,
         [
           {
             text: 'Ver todos mis registros',
@@ -188,13 +189,19 @@ const RegisterScreen = ({ navigation }) => {
           {
             text: 'Registrar otro',
             onPress: () => {
+              // Resetear todos los campos del formulario
               setName('');
               setPhoneNumber('');
               setPostalCode('');
               setBusinessName('');
               setBusinessType('');
               setClientType('');
-              setEnteredPin(''); // Limpiar el PIN ingresado
+              setEnteredPin('');
+              
+              // Resetear el reconocedor de voz
+              if (voiceRecognizerRef.current) {
+                voiceRecognizerRef.current.resetRecognizer();
+              }
             }
           }
         ]
@@ -331,11 +338,19 @@ const RegisterScreen = ({ navigation }) => {
 
   // Función para manejar los datos extraídos del reconocimiento de voz
   const handleExtractedData = (data) => {
-    if (data.nombre) setName(data.nombre);
-    if (data.telefono) setPhoneNumber(data.telefono);
-    if (data.codigoPostal) setPostalCode(data.codigoPostal);
-    if (data.nombreNegocio) setBusinessName(data.nombreNegocio);
-    if (data.tipoNegocio) setBusinessType(data.tipoNegocio);
+    console.log("Datos extraídos:", data);
+    
+    try {
+      // Solo actualizar campos si hay datos válidos
+      if (data.nombre) setName(data.nombre);
+      if (data.telefono) setPhoneNumber(data.telefono);
+      if (data.codigoPostal) setPostalCode(data.codigoPostal);
+      if (data.nombreNegocio) setBusinessName(data.nombreNegocio);
+      if (data.tipoNegocio) setBusinessType(data.tipoNegocio);
+      if (data.clienteCoppel) setClientType(data.clienteCoppel);
+    } catch (error) {
+      console.warn("Error al procesar datos extraídos:", error);
+    }
   };
 
   return (
@@ -389,7 +404,10 @@ const RegisterScreen = ({ navigation }) => {
             </Text>
             
             {/* Componente de reconocimiento de voz */}
-            <VoiceRecognizer onDataExtracted={handleExtractedData} />
+            <VoiceRecognizer 
+              ref={voiceRecognizerRef}
+              onDataExtracted={handleExtractedData} 
+            />
             
             <View className="space-y-4">
               <View>
@@ -509,7 +527,7 @@ const RegisterScreen = ({ navigation }) => {
           <View className="bg-white rounded-xl p-6 w-full">
             <Text className="text-h3 font-bold text-primary mb-4">Confirmar PIN</Text>
             <Text className="text-body text-text-soft mb-4">
-              Ingrese su PIN de acceso (siempre será 0909)
+              Ingrese su PIN de acceso
             </Text>
             
             <TextInput
