@@ -4,7 +4,6 @@ import MapView, { Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { app } from '../config/firebase';
-import { GOOGLE_MAPS_API_KEY } from '@env';
 
 const MapaGoogle = () => {
   const [origin, setOrigin] = useState(null);
@@ -12,11 +11,12 @@ const MapaGoogle = () => {
   const [waypoints, setWaypoints] = useState([]);
   const [error, setError] = useState(null);
   const db = getFirestore(app);
+  const apikey = 'AIzaSyAA8WEJzLQUMhR1p1Vucxi4g_cO3DVLGOM';
 
   useEffect(() => {
-    console.log('GOOGLE_MAPS_API_KEY', GOOGLE_MAPS_API_KEY);
-    console.log('API KEY value:', GOOGLE_MAPS_API_KEY);
-    if (!GOOGLE_MAPS_API_KEY) {
+    console.log('apikey', apikey);
+    console.log('API KEY value:', apikey);
+    if (!apikey) {
       console.error('Error: API key de Google Maps no configurada');
       setError('Error: API key no configurada');
       return;
@@ -74,7 +74,7 @@ const MapaGoogle = () => {
     const minLng = Math.min(...lngs);
     const maxLng = Math.max(...lngs);
     
-    const padding = 0.005;
+    const padding = 0.003;
     return {
       latitude: (minLat + maxLat) / 2,
       longitude: (minLng + maxLng) / 2,
@@ -99,7 +99,7 @@ const MapaGoogle = () => {
             latitude: parseFloat(wp.latitude),
             longitude: parseFloat(wp.longitude)
           }))}
-          apikey={GOOGLE_MAPS_API_KEY}
+          apikey={apikey}
           strokeWidth={4}
           strokeColor="#006FB9"
           optimizeWaypoints={true}
@@ -107,7 +107,7 @@ const MapaGoogle = () => {
             console.error('Error en la dirección:', errorMessage);
             console.log('Origin:', origin);
             console.log('Destination:', destination);
-            console.log('API Key length:', GOOGLE_MAPS_API_KEY?.length || 0);
+            console.log('API Key length:', apikey?.length || 0);
             setError('Error al cargar la ruta: ' + errorMessage);
           }}
         />
