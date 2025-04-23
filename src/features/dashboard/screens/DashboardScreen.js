@@ -1,18 +1,25 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Animated, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import MainLayout from '../../layout/components/MainLayout.js';
 import MapaGoogle from '../../../maps/Mapagoogle.js';
+import { useUser } from '../../../context/UserContext';
 
 const DashboardScreen = ({ navigation }) => {
+  const { userData } = useUser();
+  const [todayRegistrations, setTodayRegistrations] = useState(12);
+  const [totalRegistrations, setTotalRegistrations] = useState(45);
+  const [weeklyGoal, setWeeklyGoal] = useState(25);
+  const [weeklyProgress, setWeeklyProgress] = useState(18);
+  
   const pulseAnim = new Animated.Value(1);
 
-  React.useEffect(() => {
+  useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.1,
+          toValue: 1.05,
           duration: 1000,
           useNativeDriver: true,
         }),
@@ -25,84 +32,121 @@ const DashboardScreen = ({ navigation }) => {
     ).start();
   }, []);
 
+  // Calcular porcentaje de progreso para la meta semanal
+  const progressPercentage = Math.min(100, (weeklyProgress / weeklyGoal) * 100);
+  
+  // Obtener nombre del usuario o valor predeterminado
+  const userName = userData?.name || "Colaborador";
+  const firstName = userName.split(' ')[0]; // Sólo el primer nombre para personalización
+
   return (
     <MainLayout navigation={navigation}>
-      <View className="flex-1 p-4">
-        {/* Header Section */}
-        <View className="mb-6">
-          <Text className="text-h2 font-bold text-primary">Dashboard</Text>
-          <Text className="text-body text-text-soft mt-2">
-            Bienvenido a tu panel de control Nexus
-          </Text>
-        </View>
-
-        {/* Stats Overview */}
-        <View className="flex-row justify-between mb-6">
-          <View className="bg-background-box p-4 rounded-md shadow-default flex-1 mr-2">
-            <Ionicons name="analytics" size={24} color="#006FB9" />
-            <Text className="text-h4 font-bold text-primary mt-2">45</Text>
-            <Text className="text-small text-text-soft">Registros Totales</Text>
+      <ScrollView className="flex-1 bg-background" showsVerticalScrollIndicator={false}>
+        <View className="flex-1 p-4">
+          {/* Encabezado personalizado */}
+          <View className="mb-6">
+            <Text className="text-h3 text-text-soft">Hola,</Text>
+            <Text className="text-h2 font-bold text-primary">{firstName}</Text>
+            <Text className="text-body text-text-soft mt-1">
+            </Text>
           </View>
-          <View className="bg-background-box p-4 rounded-md shadow-default flex-1 ml-2">
-            <Ionicons name="today" size={24} color="#006FB9" />
-            <Text className="text-h4 font-bold text-primary mt-2">12</Text>
-            <Text className="text-small text-text-soft">Registros Hoy</Text>
-          </View>
-        </View>
 
-        {/* Map Placeholder */}
-        <View className="bg-background-box rounded-md shadow-default h-64 mb-6">
-          <View className="items-center justify-center h-full">
-            <MapaGoogle />
-          </View>
-        </View>
-
-        {/* New Registration Button */}
-        <Animated.View 
-          style={{
-            transform: [{ scale: pulseAnim }],
-          }}
-        >
-          <TouchableOpacity
-            className="rounded-md overflow-hidden shadow-primary"
-            onPress={() => navigation.navigate('Register')}
-          >
-            <LinearGradient
-              colors={['#006FB9', '#194B7B']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              className="p-4"
-            >
-              <View className="flex-row items-center justify-center">
-                <Ionicons name="add-circle" size={24} color="#FFFFFF" />
-                <Text className="text-body font-bold text-white ml-2">
-                  Nuevo Registro
-                </Text>
+          {/* Tarjeta de Progreso Semanal */}
+          <View className="bg-white rounded-xl p-4 shadow-sm mb-6">
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="text-lg font-bold text-text">Meta Semanal</Text>
+              <View className="bg-primary-light px-3 py-1 rounded-full">
+                <Text className="text-primary font-medium">{weeklyProgress} de {weeklyGoal}</Text>
               </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Quick Actions */}
-        <View className="mt-6">
-          <Text className="text-h4 font-bold text-text mb-4">Acciones Rápidas</Text>
-          <View className="flex-row flex-wrap justify-between">
-            {['Búsqueda', 'Reportes', 'Configuración'].map((action, index) => (
-              <TouchableOpacity
-                key={index}
-                className="bg-background-box w-[31%] p-3 rounded-md shadow-default items-center"
-              >
-                <Ionicons 
-                  name={['search', 'document-text', 'settings'][index]} 
-                  size={24} 
-                  color="#006FB9" 
-                />
-                <Text className="text-small text-text-soft mt-2">{action}</Text>
-              </TouchableOpacity>
-            ))}
+            </View>
+            
+            {/* Barra de progreso */}
+            <View className="h-3 bg-gray-200 rounded-full mb-2">
+              <View 
+                className="h-3 bg-primary rounded-full" 
+                style={{ width: `${progressPercentage}%` }} 
+              />
+            </View>
+            
+            <Text className="text-text-soft text-sm">
+              {weeklyGoal - weeklyProgress > 0 
+                ? `Necesitas ${weeklyGoal - weeklyProgress} más para alcanzar tu meta semanal`
+                : '¡Felicidades! Has alcanzado tu meta semanal'}
+            </Text>
           </View>
+
+          {/* Estadísticas */}
+          <View className="flex-row justify-between mb-6">
+            <View className="bg-white p-4 rounded-xl shadow-sm flex-1 mr-2">
+              <Ionicons name="analytics" size={24} color="#006FB9" />
+              <Text className="text-h3 font-bold text-primary mt-2">{totalRegistrations}</Text>
+              <Text className="text-sm text-text-soft">Registros Totales</Text>
+            </View>
+            <View className="bg-white p-4 rounded-xl shadow-sm flex-1 ml-2">
+              <Ionicons name="today" size={24} color="#006FB9" />
+              <Text className="text-h3 font-bold text-primary mt-2">{todayRegistrations}</Text>
+              <Text className="text-sm text-text-soft">Registros Hoy</Text>
+            </View>
+          </View>
+
+          {/* Mapa */}
+          <View className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden">
+            <View className="h-56 mt-1">
+              <MapaGoogle />
+            </View>
+          </View>
+
+          {/* Botón de Nuevo Registro */}
+          <Animated.View 
+            style={{
+              transform: [{ scale: pulseAnim }],
+            }}
+          >
+            <TouchableOpacity
+              className="rounded-xl overflow-hidden shadow-primary mb-6"
+              onPress={() => navigation.navigate('Register')}
+            >
+              <LinearGradient
+                colors={['#006FB9', '#194B7B']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                className="p-4"
+              >
+                <View className="flex-row items-center justify-center">
+                  <Ionicons name="add-circle" size={24} color="#FFFFFF" />
+                  <Text className="text-body font-bold text-white ml-2">
+                    Nuevo Registro
+                  </Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Acciones Rápidas */}
+          <View className="mb-4">
+            <Text className="text-lg font-bold text-text mb-3">Acciones Rápidas</Text>
+            <View className="flex-row justify-between">
+              {[
+                { name: 'Buscar', icon: 'search', screen: 'Search' },
+                { name: 'Ver Registros', icon: 'people', screen: 'Referrals' },
+                { name: 'Ranking', icon: 'trophy', screen: 'Ranking' }
+              ].map((action, index) => (
+                <TouchableOpacity
+                  key={index}
+                  className="bg-white p-3 rounded-xl shadow-sm items-center justify-center w-[31%] h-20"
+                  onPress={() => navigation.navigate(action.screen)}
+                >
+                  <Ionicons name={action.icon} size={24} color="#006FB9" />
+                  <Text className="text-sm text-text-soft mt-1 text-center">{action.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          
+          {/* Espacio para la barra de navegación */}
+          <View className="h-16" />
         </View>
-      </View>
+      </ScrollView>
     </MainLayout>
   );
 };
