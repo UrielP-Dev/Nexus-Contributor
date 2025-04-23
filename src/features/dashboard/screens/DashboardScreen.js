@@ -122,25 +122,42 @@ const DashboardScreen = ({ navigation }) => {
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Acciones Rápidas */}
+          {/* Negocios Cercanos */}
           <View className="mb-4">
-            <Text className="text-lg font-bold text-text mb-3">Acciones Rápidas</Text>
-            <View className="flex-row justify-between">
+            <Text className="text-lg font-bold text-text mb-3">Negocios Cercanos</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {[
-                { name: 'Buscar', icon: 'search', screen: 'Search' },
-                { name: 'Ver Registros', icon: 'people', screen: 'Referrals' },
-                { name: 'Ranking', icon: 'trophy', screen: 'Ranking' }
-              ].map((action, index) => (
+                { name: 'Abarrotes Don José', type: 'Tienda', distance: 150, direction: 'norte', icon: 'storefront' },
+                { name: 'Estética Bella', type: 'Estética', distance: 300, direction: 'sur', icon: 'cut' },
+                { name: 'Barbería El Jefe', type: 'Barbería', distance: 450, direction: 'este', icon: 'cut' },
+                { name: 'Papelería Lupita', type: 'Papelería', distance: 600, direction: 'oeste', icon: 'document' }
+              ].map((business, index) => (
                 <TouchableOpacity
                   key={index}
-                  className="bg-white p-3 rounded-xl shadow-sm items-center justify-center w-[31%] h-20"
-                  onPress={() => navigation.navigate(action.screen)}
+                  className="bg-white p-4 rounded-xl shadow-sm mr-3 w-64"
                 >
-                  <Ionicons name={action.icon} size={24} color="#006FB9" />
-                  <Text className="text-sm text-text-soft mt-1 text-center">{action.name}</Text>
+                  <View className="flex-row items-center mb-2">
+                    <View className="bg-primary-light p-2 rounded-full">
+                      <Ionicons name={business.icon} size={24} color="#006FB9" />
+                    </View>
+                    <View className="ml-3 flex-1">
+                      <Text className="font-bold text-text" numberOfLines={1}>{business.name}</Text>
+                      <Text className="text-text-soft text-sm">{business.type}</Text>
+                    </View>
+                  </View>
+                  <View className="flex-row items-center justify-between mt-2">
+                    <View className="flex-row items-center">
+                      <Ionicons name="location" size={16} color="#006FB9" />
+                      <Text className="text-primary ml-1">{business.distance}m</Text>
+                    </View>
+                    <View className="flex-row items-center">
+                      <Ionicons name="arrow-forward" size={16} color="#006FB9" />
+                      <Text className="text-text-soft ml-1">hacia {business.direction}</Text>
+                    </View>
+                  </View>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           </View>
           
           {/* Espacio para la barra de navegación */}
